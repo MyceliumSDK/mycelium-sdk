@@ -6,12 +6,6 @@ export interface ProxyVaults {
   stableVaults: VaultInfo[];
   nonStableVaults: VaultInfo[];
 }
-
-export interface ProxyVaultsResponse {
-  success: boolean;
-  data: ProxyVaults;
-}
-
 export interface OperationCallDataType {
   to: Address;
   data: Hex;

@@ -55,7 +55,10 @@ export abstract class BaseProtocol {
    * Get the best vault for deposits
    * @returns Single vault considered optimal for deposit
    */
-  abstract getBestVaults(): Promise<Vaults> | Vaults;
+  abstract getBestVaults(
+    stableVaultsLimit?: number,
+    nonStableVaultsLimit?: number,
+  ): Promise<Vaults> | Vaults;
 
   /**
    * Deposit funds into a vault

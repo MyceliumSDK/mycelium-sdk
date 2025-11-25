@@ -1,6 +1,5 @@
 import type { SupportedChainId } from '@/constants/chains';
 import type { ChainManager } from '@/tools/ChainManager';
-import { ApiKeysValidator } from '@/tools/ApiKeysValidator';
 import type { ProtocolsRouterConfig } from '@/types/protocols/general';
 import type { BaseProtocol } from '@/protocols/base/BaseProtocol';
 
@@ -23,9 +22,6 @@ export abstract class ProtocolRouterBase {
 
   /** API key to access premium protocols with higher yields */
   public readonly apiKey?: string; // TODO: Add an API key validation
-
-  /** API key validator instance */
-  public readonly apiKeyValidator: ApiKeysValidator = new ApiKeysValidator();
 
   /** Chain manager instance for network access */
   public readonly chainManager: ChainManager;

@@ -18,7 +18,7 @@ import type { TokenBalance } from '@/types/token';
 import { type AssetIdentifier, parseAssetAmount, resolveAsset } from '@/utils/assets';
 import { SmartWallet } from '@/wallet/base/wallets/SmartWallet';
 import type { TransactionData } from '@/types/transaction';
-import type { VaultBalance, VaultInfo, Vaults, VaultTxnResult } from '@/types/protocols/general';
+import type { VaultBalance, VaultInfo, VaultTxnResult } from '@/types/protocols/general';
 import type { CoinbaseCDP } from '@/tools/CoinbaseCDP';
 import type { OffRampUrlResponse, OnRampUrlResponse } from '@/types/ramp';
 import type { BaseProtocol } from '@/protocols/base/BaseProtocol';
@@ -195,11 +195,6 @@ export class DefaultSmartWallet extends SmartWallet {
     return depositTransactionResult;
   }
 
-  // TODO: Support new methods
-  async earnOptions(): Promise<Vaults> {
-    return await this.protocolProvider.getBestVaults();
-  }
-
   /**
    * Reads current deposit balance from the selected protocol’s vault
    * Method to read the current deposit balance from the selected protocol’s vault for a smart account
@@ -208,7 +203,7 @@ export class DefaultSmartWallet extends SmartWallet {
    * @category Earn
    * @returns Vault balance or `null` if nothing deposited
    */
-  async getEarnBalance(): Promise<VaultBalance[]> {
+  async getEarnBalances(): Promise<VaultBalance[]> {
     const userAddress = await this.getAddress();
     return this.protocolProvider.getBalances(userAddress);
   }

@@ -4,7 +4,7 @@ import type { SupportedChainId } from '@/constants/chains';
 import type { TokenBalance } from '@/types/token';
 import type { AssetIdentifier } from '@/utils/assets';
 import type { TransactionData } from '@/types/transaction';
-import type { VaultBalance, VaultInfo, Vaults, VaultTxnResult } from '@/types/protocols/general';
+import type { VaultBalance, VaultInfo, VaultTxnResult } from '@/types/protocols/general';
 import type { OffRampUrlResponse, OnRampUrlResponse } from '@/types/ramp';
 
 /**
@@ -99,9 +99,6 @@ export abstract class SmartWallet {
    */
   abstract earn(vaultInfo: VaultInfo, amount: string): Promise<VaultTxnResult>;
 
-  // TODO: Add new protocol related methods
-  abstract earnOptions(): Promise<Vaults>;
-
   /**
    * Retrieves the balance of deposited funds in the selected protocol vault
    *
@@ -109,7 +106,7 @@ export abstract class SmartWallet {
    * @category Yield
    * @returns Promise resolving to a {@link VaultBalance} or null if none
    */
-  abstract getEarnBalance(vaultInfo: VaultInfo): Promise<VaultBalance[] | null>;
+  abstract getEarnBalances(vaultInfo: VaultInfo): Promise<VaultBalance[] | null>;
 
   /**
    * Withdraws a specific amount of shares from the protocol vault

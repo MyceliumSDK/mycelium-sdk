@@ -1,55 +1,14 @@
 import { BaseProtocol } from '@/protocols/base/BaseProtocol';
 import type { ChainManager } from '@/tools/ChainManager';
 import type { VaultBalance, VaultInfo, Vaults, VaultTxnResult } from '@/types/protocols/general';
-import axios, { type AxiosInstance, type AxiosResponse, type Method } from 'axios';
-import { BACKEND_HOSTNAME } from '@/constants/general';
-import type {
-  LogOperationDataResponse,
-  OperationCallDataType,
-  ProxyVaults,
-  ProxyVaultsResponse,
-} from '@/types/protocols/proxy';
-import type { ApiResponse, RequestSettings } from '@/types/api';
+import type { OperationCallDataType, ProxyVaults } from '@/types/protocols/proxy';
 import { encodeFunctionData, erc20Abi, parseUnits, type Address, type Hash } from 'viem';
 import type { SmartWallet } from '@/public/types';
+import { ApiClient } from '@/tools/ApiClient';
 
 export class ProxyProtocol extends BaseProtocol {
-  private readonly client: AxiosInstance = axios.create({
-    baseURL: BACKEND_HOSTNAME,
-  });
-
-  /** URL settings for the endpoint: get the best vaults to deposit funds */
-  private readonly bestVaultUrlSettings: RequestSettings = {
-    method: 'GET',
-    path: 'api/v1/public/protocols/best',
-  };
-
-  /** URL settings for the endpoint: deposit funds to a provided vault */
-  private readonly depositUrlSettings: RequestSettings = {
-    method: 'POST',
-    path: 'api/v1/public/protocols/details/:protocolId/deposit',
-  };
-
-  /** URL settings for the endpoint: log a vault-related operation after deposit or withdraw funds */
-  private readonly logOperationSettings: RequestSettings = {
-    method: 'POST',
-    path: 'api/v1/public/log/operation',
-  };
-
-  /** URL settings for the endpoint: withdraw funds from a provided vault */
-  private readonly withdrawUrlSettings: RequestSettings = {
-    method: 'POST',
-    path: 'api/v1/public/protocols/details/:protocolId/withdraw',
-  };
-
-  /** URL settings for the endpoint: get the balances of a user by a provided address */
-  private readonly balancesUrlSettings: RequestSettings = {
-    method: 'GET',
-    path: 'api/v1/public/protocols/details/:protocolId/balances',
-  };
-
-  /** API key for the backend API */
-  private apiKey: string | undefined;
+  /** API client for the backend API */
+  private apiClient!: ApiClient;
 
   /**
    * Initialize the Spark protocol with the provided chain manager
@@ -61,35 +20,7 @@ export class ProxyProtocol extends BaseProtocol {
 
     this.publicClient = chainManager.getPublicClient(this.selectedChainId!);
 
-    this.apiKey = apiKey;
-  }
-
-  /**
-   * Send a request to the backend API
-   * @param path Path of the endpoint to send the request to
-   * @param method Method of the request
-   * @param body Body of the request
-   * @returns Response from the backend API
-   */
-  private async sendRequest(
-    path: string,
-    method: Method,
-    body?: Record<string, string | VaultInfo>,
-  ): Promise<ApiResponse<unknown>> {
-    const response: AxiosResponse<ApiResponse<ProxyVaultsResponse>> = await this.client.request({
-      method,
-      url: path,
-      data: body,
-      headers: { Authorization: this.apiKey, 'Content-Type': 'application/json' },
-    });
-
-    if (response.status !== 200) {
-      throw new Error(`Failed to send request to ${path}`);
-    }
-
-    const apiResponse = response.data as ApiResponse<unknown>;
-
-    return apiResponse;
+    this.apiClient = new ApiClient(apiKey);
   }
 
   /**
@@ -111,9 +42,7 @@ export class ProxyProtocol extends BaseProtocol {
     operationType: 'deposit' | 'withdraw',
     operationStatus: 'completed' | 'failed',
   ): Promise<void> {
-    const requestPath = `${this.logOperationSettings.path}`;
-    const requestMethod = this.logOperationSettings.method;
-    const apiResponse = await this.sendRequest(requestPath, requestMethod, {
+    const apiResponse = await this.apiClient.sendRequest('log', undefined, undefined, {
       userAddress,
       protocolId: vaultInfo.protocolId,
       vaultAddress: vaultInfo.vaultAddress,
@@ -129,8 +58,6 @@ export class ProxyProtocol extends BaseProtocol {
         apiResponse.error || `Failed to log operation: ${operationType} for vault: ${vaultInfo}`,
       );
     }
-
-    apiResponse.data as unknown as LogOperationDataResponse;
   }
 
   /**
@@ -149,10 +76,7 @@ export class ProxyProtocol extends BaseProtocol {
       non_stable_vaults_limit: nonStableVaultsLimit.toString(),
     });
 
-    const requestPath = `${this.bestVaultUrlSettings.path}?${pathParams.toString()}`;
-    const requestMethod = this.bestVaultUrlSettings.method;
-
-    const apiResponse = await this.sendRequest(requestPath, requestMethod);
+    const apiResponse = await this.apiClient.sendRequest('vaults', pathParams);
 
     if (!apiResponse.success) {
       throw new Error(apiResponse.error || 'Failed to get best vaults');
@@ -227,14 +151,16 @@ export class ProxyProtocol extends BaseProtocol {
       throw new Error('Vault protocol ID is required');
     }
 
-    const requestPath = `${this.depositUrlSettings.path.replace(':protocolId', vaultInfo.protocolId)}`;
-    const requestMethod = this.depositUrlSettings.method;
-
-    const apiResponse = await this.sendRequest(requestPath, requestMethod, {
-      vaultInfo,
-      amount,
-      chainId: this.selectedChainId!.toString(),
-    });
+    const apiResponse = await this.apiClient.sendRequest(
+      'deposit',
+      undefined,
+      vaultInfo.protocolId,
+      {
+        vaultInfo,
+        amount,
+        chainId: this.selectedChainId!.toString(),
+      },
+    );
 
     if (!apiResponse.success) {
       throw new Error(apiResponse.error || 'Failed to receive deposit operations call data');
@@ -274,14 +200,17 @@ export class ProxyProtocol extends BaseProtocol {
     smartWallet: SmartWallet,
   ): Promise<VaultTxnResult> {
     const currentAddress = await smartWallet.getAddress();
-    const requestPath = `${this.withdrawUrlSettings.path.replace(':protocolId', vaultInfo.protocolId)}`;
-    const requestMethod = this.withdrawUrlSettings.method;
 
-    const apiResponse = await this.sendRequest(requestPath, requestMethod, {
-      vaultInfo,
-      amount,
-      chainId: this.selectedChainId!.toString(),
-    });
+    const apiResponse = await this.apiClient.sendRequest(
+      'withdraw',
+      undefined,
+      vaultInfo.protocolId,
+      {
+        vaultInfo,
+        amount,
+        chainId: this.selectedChainId!.toString(),
+      },
+    );
 
     if (!apiResponse.success) {
       throw new Error(apiResponse.error || 'Failed to receive withdraw operations call data');
@@ -319,10 +248,7 @@ export class ProxyProtocol extends BaseProtocol {
       user_address: walletAddress,
     });
 
-    const requestPath = `${this.balancesUrlSettings.path}?${pathParams.toString()}`;
-    const requestMethod = this.balancesUrlSettings.method;
-
-    const apiResponse = await this.sendRequest(requestPath, requestMethod);
+    const apiResponse = await this.apiClient.sendRequest('balances', pathParams);
 
     if (!apiResponse.success) {
       throw new Error(apiResponse.error || 'Failed to get balances');

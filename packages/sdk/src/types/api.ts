@@ -14,3 +14,11 @@ export interface RequestSettings {
   method: Method;
   path: string;
 }
+
+export type OperationType =
+  | 'deposit'
+  | 'withdraw'
+  | 'log'
+  | 'vaults'
+  | 'balances'
+  | 'apiKeyValidation';

@@ -27,7 +27,8 @@ import { ProtocolRouter } from '@/router/ProtocolRouter';
 import { logger } from '@/tools/Logger';
 import { CoinbaseCDP, type CoinbaseCDP as CoinbaseCDPType } from '@/tools/CoinbaseCDP';
 import { FundingNamespace } from '@/ramp/FundingNamespace';
-import type { BaseProtocol } from './protocols/base/BaseProtocol';
+import type { BaseProtocol } from '@/protocols/base/BaseProtocol';
+import { ProtocolsNamespace } from '@/protocols/ProtocolsNamespace';
 
 /**
  * Main SDK facade for integrating wallets and protocols.
@@ -68,6 +69,13 @@ export class MyceliumSDK {
    * @category Wallets
    */
   public readonly wallet: WalletNamespace;
+
+  /**
+   * Protocol namespace to manage protocol related operations
+   * @public
+   * @category Protocols
+   */
+  public readonly protocols: ProtocolsNamespace;
 
   /**
    * Ramp namespace to manage ramp operations. Methods are available on {@link RampNamespace}
@@ -148,6 +156,8 @@ export class MyceliumSDK {
     this.protocol = this.selectProtocol(protocolsRouterConfig);
 
     this.wallet = this.createWalletNamespace(config.walletsConfig);
+
+    this.protocols = new ProtocolsNamespace(this.protocol);
   }
 
   /**

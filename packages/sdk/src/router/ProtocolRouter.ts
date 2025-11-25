@@ -3,6 +3,7 @@ import { availableProtocols } from '@/constants/protocols';
 import type { BaseProtocol } from '@/protocols/base/BaseProtocol';
 import { ProxyProtocol } from '@/protocols/implementations/ProxyProtocol';
 import { ProtocolRouterBase } from '@/router/base/ProtocolRouterBase';
+import { ApiClient } from '@/tools/ApiClient';
 import type { ChainManager } from '@/tools/ChainManager';
 import type { Protocol, ProtocolsRouterConfig } from '@/types/protocols/general';
 
@@ -16,7 +17,7 @@ import type { Protocol, ProtocolsRouterConfig } from '@/types/protocols/general'
  * available protocols, and API key for paid protocols
  */
 export class ProtocolRouter extends ProtocolRouterBase {
-  private isPremiumAvailable: boolean;
+  private isPremiumAvailable: boolean = false;
 
   /**
    * Initialize the protocol router
@@ -26,8 +27,22 @@ export class ProtocolRouter extends ProtocolRouterBase {
   constructor(config: ProtocolsRouterConfig, chainManager: ChainManager) {
     super(config.riskLevel, chainManager, config.minApy, config.apiKey);
 
-    this.isPremiumAvailable = this.apiKeyValidator.validate(this.apiKey);
+    this.checkIfPremiumAvailable();
   }
+
+  /**
+   * Async method to check if the API key is valid
+   * @returns True if the API key is valid
+   */
+  private async checkIfPremiumAvailable(): Promise<void> {
+    if (this.apiKey) {
+      const apiClient = new ApiClient(this.apiKey);
+      const isKeyValid = await apiClient.validate();
+
+      this.isPremiumAvailable = isKeyValid;
+    }
+  }
+
   /**
    * Get all protocols available for the current configuration
    *
