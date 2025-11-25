@@ -24,10 +24,10 @@ import type { EmbeddedWalletProvider } from '@/wallet/base/providers/EmbeddedWal
 import { PrivyEmbeddedWalletProvider } from './wallet/providers/PrivyEmbeddedWalletProvider';
 import { PrivyClient } from '@privy-io/server-auth';
 import { ProtocolRouter } from '@/router/ProtocolRouter';
-import type { Protocol } from '@/types/protocols/general';
 import { logger } from '@/tools/Logger';
 import { CoinbaseCDP, type CoinbaseCDP as CoinbaseCDPType } from '@/tools/CoinbaseCDP';
 import { FundingNamespace } from '@/ramp/FundingNamespace';
+import type { BaseProtocol } from './protocols/base/BaseProtocol';
 
 /**
  * Main SDK facade for integrating wallets and protocols.
@@ -95,7 +95,7 @@ export class MyceliumSDK {
    * Protocol instance to perform earn related operations with a selected protocol
    * @internal
    */
-  private protocol: Protocol;
+  private protocol: BaseProtocol;
 
   /**
    * Coinbase CDP instance to Coinbase related and onchain operations using Coinbase CDP API
@@ -145,7 +145,7 @@ export class MyceliumSDK {
     };
 
     // protocolsRouterConfig is the abstract settings that are clear for a dev, e.g. risk level, basic apy, etc
-    this.protocol = this.findProtocol(protocolsRouterConfig);
+    this.protocol = this.selectProtocol(protocolsRouterConfig);
 
     this.wallet = this.createWalletNamespace(config.walletsConfig);
   }
@@ -189,7 +189,7 @@ export class MyceliumSDK {
    * @param config Protocol router configuration (e.g. risk level)
    * @returns Selected protocol object of the type {@link Protocol}
    */
-  private findProtocol(config: MyceliumSDKConfig['protocolsRouterConfig']): Protocol {
+  private selectProtocol(config: MyceliumSDKConfig['protocolsRouterConfig']): BaseProtocol {
     // 1. Create a smart router with the given config
     // 2. Smart router will fetch available protocols
     // 3. Smart router will find the best protocol based on the given config
@@ -198,9 +198,9 @@ export class MyceliumSDK {
 
     const protocolRouter = new ProtocolRouter(config!, this.chainManager);
 
-    const protocol: Protocol = protocolRouter.recommend();
+    const protocol: BaseProtocol = protocolRouter.select();
 
-    protocol.instance.init(this.chainManager);
+    protocol.init(this.chainManager);
 
     return protocol;
   }

@@ -1,5 +1,7 @@
 import type { SupportedChainId } from '@/constants/chains';
 import { availableProtocols } from '@/constants/protocols';
+import type { BaseProtocol } from '@/protocols/base/BaseProtocol';
+import { ProxyProtocol } from '@/protocols/implementations/ProxyProtocol';
 import { ProtocolRouterBase } from '@/router/base/ProtocolRouterBase';
 import type { ChainManager } from '@/tools/ChainManager';
 import type { Protocol, ProtocolsRouterConfig } from '@/types/protocols/general';
@@ -14,6 +16,8 @@ import type { Protocol, ProtocolsRouterConfig } from '@/types/protocols/general'
  * available protocols, and API key for paid protocols
  */
 export class ProtocolRouter extends ProtocolRouterBase {
+  private isPremiumAvailable: boolean;
+
   /**
    * Initialize the protocol router
    * @param config Router configuration including risk level, min APY, and optional API key
@@ -21,6 +25,8 @@ export class ProtocolRouter extends ProtocolRouterBase {
    */
   constructor(config: ProtocolsRouterConfig, chainManager: ChainManager) {
     super(config.riskLevel, chainManager, config.minApy, config.apiKey);
+
+    this.isPremiumAvailable = this.apiKeyValidator.validate(this.apiKey);
   }
   /**
    * Get all protocols available for the current configuration
@@ -28,20 +34,10 @@ export class ProtocolRouter extends ProtocolRouterBase {
    * Includes all non-premium protocols and premium protocols if the API key is valid
    * @returns Array of available protocol definitions
    */
-  getProtocols(): Protocol[] {
-    const isKeyValid = this.apiKeyValidator.validate(this.apiKey);
-
-    // Filter protocols based on two conditions:
-    // 1. Include all non-premium protocols
-    // 2. Include premium protocols only if API key is valid
+  getActivePublicProtocols(): Protocol[] {
+    // Include all publicly available protocols
     const allAvailableProtocols = availableProtocols.filter((protocol) => {
-      // Always include non-premium protocols
-      if (!protocol.info.isPremium) {
-        return true;
-      }
-
-      // Include premium protocols only if API key is valid
-      return protocol.info.isPremium && isKeyValid;
+      return protocol.info.isActive;
     });
 
     return allAvailableProtocols;
@@ -69,10 +65,13 @@ export class ProtocolRouter extends ProtocolRouterBase {
    * @throws Error if no protocols are available for the current risk level
    * @returns Protocol instance considered the best match
    */
-  recommend(): Protocol {
-    const protocols = this.getProtocols();
+  select(): BaseProtocol {
+    if (this.isPremiumAvailable) {
+      return new ProxyProtocol();
+    }
 
-    // TODO: Implement the recommendation logic => fetch pools for each protocol and then check APY for each pool to make sure the protocols is the best suited for the given router config
+    const protocols = this.getActivePublicProtocols();
+
     // Filter protocols that match the risk level. Later on add more conditions for the recommendation
     const eligibleProtocols = protocols.filter((protocol) => {
       // Check if protocol matches risk level
@@ -87,10 +86,9 @@ export class ProtocolRouter extends ProtocolRouterBase {
       throw new Error(`No protocols available for risk level: ${this.riskLevel}`);
     }
 
-    // TODO: Add a smarter sorting of protocols here and then return the best one
-    // For now, we just return the first protocol that matches the risk level
+    // For now, we just return the first protocol from public protocols that matches the risk level
     const bestProtocol = eligibleProtocols[0];
 
-    return bestProtocol!;
+    return bestProtocol!.instance;
   }
 }

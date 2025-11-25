@@ -1,21 +1,8 @@
 import { BaseProtocol } from '@/protocols/base/BaseProtocol';
 import type { ChainManager } from '@/tools/ChainManager';
-import type { SupportedChainId } from '@/constants/chains';
 import type { SmartWallet } from '@/wallet/base/wallets/SmartWallet';
-import type {
-  SparkVaultInfo,
-  SparkVaultTxnResult,
-  SparkVaultBalance,
-} from '@/types/protocols/spark';
 
-import {
-  type Address,
-  encodeFunctionData,
-  erc20Abi,
-  formatUnits,
-  parseUnits,
-  type PublicClient,
-} from 'viem';
+import { type Address, encodeFunctionData, erc20Abi, formatUnits, parseUnits } from 'viem';
 
 import { SPARK_VAULT_ABI, SPARK_SSR_ORACLE_ABI } from '@/abis/protocols/spark';
 import {
@@ -24,7 +11,7 @@ import {
   SPARK_SSR_ORACLE_ADDRESS,
   SPARK_VAULT,
 } from '@/protocols/constants/spark';
-import { logger } from '@/tools/Logger';
+import type { VaultBalance, VaultInfo, Vaults, VaultTxnResult } from '@/types/protocols/general';
 
 /**
  * @internal
@@ -35,14 +22,9 @@ import { logger } from '@/tools/Logger';
  * Provides ERC-4626 vault management including deposits, withdrawals, and balance tracking
  * Used by the SDK to interact with Spark-based yield vaults
  */
-export class SparkProtocol extends BaseProtocol<
-  SparkVaultInfo,
-  SparkVaultBalance,
-  SparkVaultTxnResult
-> {
-  private selectedChainId: SupportedChainId | undefined;
-  private allVaults: SparkVaultInfo[] = [];
-  private publicClient: PublicClient | undefined;
+export class SparkProtocol extends BaseProtocol {
+  /** All Spark vaults */
+  private allVaults: VaultInfo[] = [];
 
   /**
    * Initialize the Spark protocol with the provided chain manager
@@ -54,7 +36,7 @@ export class SparkProtocol extends BaseProtocol<
 
     this.publicClient = chainManager.getPublicClient(this.selectedChainId!);
 
-    this.allVaults = this.getVaults();
+    this.allVaults = SPARK_VAULT;
   }
 
   /**
@@ -94,20 +76,12 @@ export class SparkProtocol extends BaseProtocol<
   }
 
   /**
-   *
-   *  Get all vault info from a Spark protocol
-   * @returns The list of vaults
-   */
-  getVaults(): SparkVaultInfo[] {
-    return SPARK_VAULT;
-  }
-
-  /**
-   * Get the best available Spark vault
-   * @returns The top-ranked Spark vault
+   * Get the best available Spark vaults
+   * @remarks Currently, the vault is only one and relates to sUSDC. Currently return only one stable vault
+   * @returns Best Spark vaults in 2 groups: stable and non-stable
    * @throws Error if no vaults found
    */
-  async getBestVault(): Promise<SparkVaultInfo> {
+  async getBestVaults(): Promise<Vaults> {
     if (this.allVaults.length === 0) {
       throw new Error('No vaults found');
     }
@@ -119,79 +93,48 @@ export class SparkProtocol extends BaseProtocol<
     // The APY for Spark vaults calculates the same for all vaults
     selectedVault.metadata!.apy = await this.getAPY();
 
-    return selectedVault;
-  }
-
-  /**
-   * Fetch a vault where the user previously deposited funds
-   * @param smartWallet Smart wallet to inspect
-   * @returns The vault with user deposits, or null if none found
-   */
-  async fetchDepositedVaults(smartWallet: SmartWallet): Promise<SparkVaultInfo | null> {
-    let depositedVault: SparkVaultInfo | undefined = undefined;
-    const userAddress = await smartWallet.getAddress();
-    for (const vault of this.allVaults) {
-      const balance = await this.getBalance(vault, userAddress);
-      if (parseInt(balance.depositedAmount) > 0) {
-        depositedVault = vault;
-      }
-    }
-
-    if (depositedVault) {
-      depositedVault.metadata!.apy = await this.getAPY();
-    }
-    logger.info('Deposited vaults:', { depositedVault }, 'SparkProtocol');
-
-    return depositedVault || null;
+    return {
+      stable: [selectedVault],
+      nonStable: [],
+    };
   }
 
   /**
    * Deposit funds into a Spark vault
+   * @param vaultInfo Vault information
    * @param amount Amount to deposit (human-readable)
    * @param smartWallet Smart wallet instance to use
    * @returns Transaction result with hash
    */
-  async deposit(amount: string, smartWallet: SmartWallet): Promise<SparkVaultTxnResult> {
-    // Check if a user deposited previously to any vault of the protocol
-    const depositedVault = await this.fetchDepositedVaults(smartWallet);
-
-    let vaultInfoToDeposit: SparkVaultInfo;
-    logger.info('Previously deposited vault:', { depositedVault }, 'SparkProtocol');
-    if (depositedVault) {
-      vaultInfoToDeposit = depositedVault;
-    } else {
-      // Find the best pool to deposit for a protocol
-      vaultInfoToDeposit = await this.getBestVault();
-      logger.info('Best vault that found:', { bestVault: vaultInfoToDeposit }, 'SparkProtocol');
-    }
-
+  async deposit(
+    vaultInfo: VaultInfo,
+    amount: string,
+    smartWallet: SmartWallet,
+  ): Promise<VaultTxnResult> {
     const owner = await smartWallet.getAddress();
-    const assets = parseUnits(amount, vaultInfoToDeposit.depositTokenDecimals);
-    logger.info('Raw deposit amount:', { amount, assets }, 'SparkProtocol');
+    const assets = parseUnits(amount, vaultInfo.tokenDecimals);
 
     const allowance = await this.checkAllowance(
-      vaultInfoToDeposit.depositTokenAddress,
-      vaultInfoToDeposit.vaultAddress,
+      vaultInfo.tokenAddress,
+      vaultInfo.vaultAddress,
       owner,
       this.selectedChainId!,
     );
-
-    logger.info('Current vault contract allowance:', { allowance }, 'SparkProtocol');
 
     const ops: { to: Address; data: `0x${string}` }[] = [];
 
     if (allowance < assets) {
       ops.push({
-        to: vaultInfoToDeposit.depositTokenAddress,
+        to: vaultInfo.tokenAddress,
         data: encodeFunctionData({
           abi: erc20Abi,
           functionName: 'approve',
-          args: [vaultInfoToDeposit.vaultAddress, assets],
+          args: [vaultInfo.vaultAddress, assets],
         }),
       });
     }
     ops.push({
-      to: vaultInfoToDeposit.vaultAddress,
+      to: vaultInfo.vaultAddress,
       data: encodeFunctionData({
         abi: SPARK_VAULT_ABI,
         functionName: 'deposit',
@@ -205,30 +148,26 @@ export class SparkProtocol extends BaseProtocol<
 
   /**
    * Withdraw funds from a Spark vault
-   * @param amountInUnderlying Amount in base token units (or undefined to withdraw all)
+   * @param vaultInfo Vault information
+   * @param amount Amount in base token units (or undefined to withdraw all)
    * @param smartWallet Smart wallet instance to withdraw from
    * @returns Transaction result with hash
    * @throws Error if no deposited vault found
    */
   async withdraw(
-    amountInUnderlying: string | undefined,
+    vaultInfo: VaultInfo,
+    amount: string | undefined,
     smartWallet: SmartWallet,
-  ): Promise<SparkVaultTxnResult> {
-    const depositedVault = await this.fetchDepositedVaults(smartWallet);
-
-    if (!depositedVault) {
-      throw new Error('No vault found to withdraw from');
-    }
-
+  ): Promise<VaultTxnResult> {
     const owner = await smartWallet.getAddress();
 
     let withdrawData: { to: Address; data: `0x${string}` };
 
-    if (amountInUnderlying) {
-      const assets = parseUnits(amountInUnderlying, depositedVault.depositTokenDecimals);
-      logger.info('Withdraw amount:', { amountInUnderlying, assets }, 'SparkProtocol');
+    if (amount) {
+      const assets = parseUnits(amount, vaultInfo.tokenDecimals);
+
       withdrawData = {
-        to: depositedVault.vaultAddress,
+        to: vaultInfo.vaultAddress,
         data: encodeFunctionData({
           abi: SPARK_VAULT_ABI,
           functionName: 'withdraw',
@@ -236,10 +175,10 @@ export class SparkProtocol extends BaseProtocol<
         }),
       };
     } else {
-      const maxShares = await this.getMaxRedeemableShares(depositedVault, owner);
-      logger.info('Withdrawing all funds:', { maxShares }, 'SparkProtocol');
+      const maxShares = await this.getMaxRedeemableShares(vaultInfo, owner);
+
       withdrawData = {
-        to: depositedVault.vaultAddress,
+        to: vaultInfo.vaultAddress,
         data: encodeFunctionData({
           abi: SPARK_VAULT_ABI,
           functionName: 'redeem',
@@ -249,7 +188,7 @@ export class SparkProtocol extends BaseProtocol<
     }
 
     const hash = await smartWallet.send(withdrawData, this.selectedChainId!);
-    logger.info('Withdraw transaction sent:', { hash }, 'SparkProtocol');
+
     return { success: true, hash };
   }
 
@@ -260,7 +199,7 @@ export class SparkProtocol extends BaseProtocol<
    * @returns Maximum redeemable shares as bigint
    */
   private async getMaxRedeemableShares(
-    vaultInfo: SparkVaultInfo,
+    vaultInfo: VaultInfo,
     walletAddress: Address,
   ): Promise<bigint> {
     if (!this.publicClient) {
@@ -279,14 +218,16 @@ export class SparkProtocol extends BaseProtocol<
 
   /**
    * Get amount that a wallet has deposited in a vault
-   * @param vaultInfo Vault information
    * @param walletAddress Wallet address to check
-   * @returns Object containing shares and deposited amount
+   * @returns Array of vault balances with vaults info
    */
-  async getBalance(vaultInfo: SparkVaultInfo, walletAddress: Address): Promise<SparkVaultBalance> {
+  async getBalances(walletAddress: Address): Promise<VaultBalance[]> {
     if (!this.publicClient) {
       throw new Error('Public client not initialized');
     }
+
+    // Use just one spark vault in this implementation
+    const vaultInfo = SPARK_VAULT[0]!;
 
     const shares = await this.publicClient.readContract({
       address: vaultInfo.vaultAddress,
@@ -296,7 +237,7 @@ export class SparkProtocol extends BaseProtocol<
     });
 
     if (shares === 0n) {
-      return { shares: '0', depositedAmount: '0', vaultInfo };
+      return [{ balance: null, vaultInfo }];
     }
 
     const assets = await this.publicClient.readContract({
@@ -306,10 +247,11 @@ export class SparkProtocol extends BaseProtocol<
       args: [shares],
     });
 
-    return {
-      shares: formatUnits(shares, vaultInfo.earnTokenDecimals),
-      depositedAmount: formatUnits(assets, vaultInfo.depositTokenDecimals),
-      vaultInfo,
-    };
+    return [
+      {
+        balance: formatUnits(assets, vaultInfo.tokenDecimals),
+        vaultInfo,
+      },
+    ];
   }
 }

@@ -1,7 +1,8 @@
 import type { SupportedChainId } from '@/constants/chains';
 import type { ChainManager } from '@/tools/ChainManager';
 import { ApiKeysValidator } from '@/tools/ApiKeysValidator';
-import type { Protocol, ProtocolsRouterConfig } from '@/types/protocols/general';
+import type { ProtocolsRouterConfig } from '@/types/protocols/general';
+import type { BaseProtocol } from '@/protocols/base/BaseProtocol';
 
 /**
  * Base Protocol Router
@@ -49,12 +50,6 @@ export abstract class ProtocolRouterBase {
   }
 
   /**
-   * Get all supported protocols
-   * @returns Array of protocols supported by this router
-   */
-  abstract getProtocols(): Protocol[];
-
-  /**
    * Check if the given chains are supported by the router
    * @param chainIds List of chain IDs to check
    * @returns True if at least one chain is supported
@@ -63,8 +58,8 @@ export abstract class ProtocolRouterBase {
 
   /**
    * Recommend the most suitable protocol based on router configuration
-   *  Returns a protocol that best matches the configured risk level, APY, and chain support
+   * @remarks Returns a protocol that best matches the configured risk level, APY, and chain support
    * @returns Protocol instance considered the best match
    */
-  abstract recommend(): Protocol;
+  abstract select(): BaseProtocol;
 }

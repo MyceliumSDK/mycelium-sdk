@@ -6,10 +6,11 @@ import {
   createWalletClient,
   http,
   parseGwei,
+  type PublicClient,
 } from 'viem';
 import type { SupportedChainId } from '@/constants/chains';
 import type { SmartWallet } from '@/wallet/base/wallets/SmartWallet';
-import type { VaultInfo, VaultBalance, VaultTxnResult } from '@/types/protocols/general';
+import type { VaultInfo, VaultBalance, VaultTxnResult, Vaults } from '@/types/protocols/general';
 
 /**
  * Base Protocol
@@ -24,19 +25,21 @@ import type { VaultInfo, VaultBalance, VaultTxnResult } from '@/types/protocols/
  *
  * Generic parameters allow protocol-specific typing for vault info, balances, and transaction results
  */
-export abstract class BaseProtocol<
-  TVaultInfo extends VaultInfo = VaultInfo,
-  TVaultBalance extends VaultBalance = VaultBalance,
-  TVaultTxnResult extends VaultTxnResult = VaultTxnResult,
-> {
-  /** Chain manager instance injected during initialization */
+export abstract class BaseProtocol {
+  /** Selected chain ID for the protocol */
+  protected selectedChainId: SupportedChainId | undefined;
+
+  /** Public client to make requests to RPC */
+  protected publicClient: PublicClient | undefined;
+
+  /** Chain manager instance for network access */
   public chainManager: ChainManager | undefined;
 
   /**
    * Initialize the protocol
    * @param chainManager Chain manager for accessing RPC and bundler clients
    */
-  abstract init(chainManager: ChainManager): Promise<void>;
+  abstract init(chainManager: ChainManager, apiKey?: string): Promise<void>;
 
   /**
    * Ensure the protocol has been initialized
@@ -49,47 +52,44 @@ export abstract class BaseProtocol<
   }
 
   /**
-   * Get all available vaults
-   * @returns List of vaults that support deposits
-   */
-  abstract getVaults(): Promise<TVaultInfo[]> | TVaultInfo[];
-
-  /**
    * Get the best vault for deposits
    * @returns Single vault considered optimal for deposit
    */
-  abstract getBestVault(): Promise<TVaultInfo> | TVaultInfo;
-
-  /**
-   * Get a vault where funds may already be deposited
-   * @param smartWallet Wallet to check for existing deposits
-   * @returns Vault info if deposits exist, otherwise null
-   */
-  abstract fetchDepositedVaults(smartWallet: SmartWallet): Promise<TVaultInfo | null>;
+  abstract getBestVaults(): Promise<Vaults> | Vaults;
 
   /**
    * Deposit funds into a vault
+   * @param vaultInfo Vault information
    * @param amount Amount in human-readable format
    * @param smartWallet Wallet executing the deposit
    * @returns Result of the deposit transaction
    */
-  abstract deposit(amount: string, smartWallet: SmartWallet): Promise<TVaultTxnResult>;
+  abstract deposit(
+    vaultInfo: VaultInfo,
+    amount: string,
+    smartWallet: SmartWallet,
+  ): Promise<VaultTxnResult>;
 
   /**
    * Withdraw funds from a vault
-   * @param amountInShares Amount of shares to withdraw
+   * @param vaultInfo Vault information
+   * @param amount Amount in human-readable format (or undefined to withdraw all)
    * @param smartWallet Wallet executing the withdrawal
    * @returns Result of the withdrawal transaction
    */
-  abstract withdraw(amountInShares: string, smartWallet: SmartWallet): Promise<TVaultTxnResult>;
+  abstract withdraw(
+    vaultInfo: VaultInfo,
+    amountInShares: string,
+    smartWallet: SmartWallet,
+  ): Promise<VaultTxnResult>;
 
   /**
    * Get deposited balance in a vault
-   * @param vaultInfo Vault info for a selected protocol
    * @param walletAddress Wallet address to check the balance of
+   * @param protocolId Protocol ID to get balances for
    * @returns Balance of deposited funds
    */
-  abstract getBalance(vaultInfo: TVaultInfo, walletAddress: Address): Promise<TVaultBalance>;
+  abstract getBalances(walletAddress: Address, protocolId?: string): Promise<VaultBalance[]>;
 
   /**
    * Approve a token for protocol use
