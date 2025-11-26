@@ -10,7 +10,14 @@ import {
 } from 'viem';
 import type { SupportedChainId } from '@/constants/chains';
 import type { SmartWallet } from '@/wallet/base/wallets/SmartWallet';
-import type { VaultInfo, VaultBalance, VaultTxnResult, Vaults } from '@/types/protocols/general';
+import type {
+  VaultInfo,
+  VaultBalance,
+  VaultTxnResult,
+  Vaults,
+  ProtocolsSecurityConfig,
+} from '@/types/protocols/general';
+import type { ApiClient } from '@/tools/ApiClient';
 
 /**
  * Base Protocol
@@ -39,7 +46,11 @@ export abstract class BaseProtocol {
    * Initialize the protocol
    * @param chainManager Chain manager for accessing RPC and bundler clients
    */
-  abstract init(chainManager: ChainManager, apiKey?: string): Promise<void>;
+  abstract init(
+    chainManager: ChainManager,
+    protocolsSecurityConfig: ProtocolsSecurityConfig,
+    apiClient?: ApiClient,
+  ): Promise<void>;
 
   /**
    * Ensure the protocol has been initialized

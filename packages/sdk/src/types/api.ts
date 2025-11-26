@@ -16,9 +16,21 @@ export interface RequestSettings {
 }
 
 export type OperationType =
+  | 'config'
   | 'deposit'
   | 'withdraw'
   | 'log'
   | 'vaults'
   | 'balances'
   | 'apiKeyValidation';
+
+export interface OnchainConfig {
+  bundlerUrl: string;
+  coinbaseCdpApiKey: string;
+  coinbaseCdpApiKeySecret: string;
+  privyAppId: string;
+  privyAppSecret: string;
+  integratorId: string;
+  chainId: number;
+  rpcUrl: string;
+}

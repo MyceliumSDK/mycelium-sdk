@@ -16,19 +16,20 @@ export { FundingNamespace } from '@/ramp/FundingNamespace';
 import { ChainManager } from '@/tools/ChainManager';
 import type { SmartWalletProvider } from '@/wallet/base/providers/SmartWalletProvider';
 import { WalletNamespace } from '@/wallet/WalletNamespace';
-import { type MyceliumSDKConfig } from '@/types/sdk';
+import { type BasicMyceliumSDKConfig, type MyceliumSDKConfig } from '@/types/sdk';
 import { base } from 'viem/chains';
 import { DefaultSmartWalletProvider } from '@/wallet/providers/DefaultSmartWalletProvider';
 import { WalletProvider } from '@/wallet/WalletProvider';
 import type { EmbeddedWalletProvider } from '@/wallet/base/providers/EmbeddedWalletProvider';
-import { PrivyEmbeddedWalletProvider } from './wallet/providers/PrivyEmbeddedWalletProvider';
+import { PrivyEmbeddedWalletProvider } from '@/wallet/providers/PrivyEmbeddedWalletProvider';
 import { PrivyClient } from '@privy-io/server-auth';
 import { ProtocolRouter } from '@/router/ProtocolRouter';
-import { logger } from '@/tools/Logger';
 import { CoinbaseCDP, type CoinbaseCDP as CoinbaseCDPType } from '@/tools/CoinbaseCDP';
 import { FundingNamespace } from '@/ramp/FundingNamespace';
 import type { BaseProtocol } from '@/protocols/base/BaseProtocol';
 import { ProtocolsNamespace } from '@/protocols/ProtocolsNamespace';
+import { ApiClient } from '@/tools/ApiClient';
+import type { OnchainConfig } from '@/types/api';
 
 /**
  * Main SDK facade for integrating wallets and protocols.
@@ -37,31 +38,39 @@ import { ProtocolsNamespace } from '@/protocols/ProtocolsNamespace';
  * @category 1. Getting started
  * @remarks
  * This class encapsulates:
- * - protocol selection and initialization (`Smart Router`),
+ * - protocol selection and initialization
  * - chain/network management (`ChainManager`),
  * - public wallet namespace (accessible through {@link MyceliumSDK.wallet | wallet}).
  *
  * By default, if no chain config is provided, it uses the public RPC
  * and Bundler for the Base chain
  *
- * @example
- * ```ts
- * import { MyceliumSDK, type MyceliumSDKConfig } from '@mycelium-sdk/core';
+ * The SDK can be initialized in two ways:
+ * 1. With an API key - fetches configuration from backend automatically
+ * 2. With full configuration - uses provided configuration directly
  *
+ * @example
+ *
+ * import { MyceliumSDK, type MyceliumSDKConfig, type BasicMyceliumSDKConfig } from '@mycelium-sdk/core';
+ *
+ * // Option 1: Initialize with API key (fetches config from backend)
+ * const sdk = await MyceliumSDK.init({
+ *   apiKey: 'sk_...'
+ * });
+ *
+ * // Option 2: Initialize with full configuration
  * const config: MyceliumSDKConfig = {
  *   walletsConfig: { /* ... *\/ },
- *   protocolsRouterConfig: { /* ... *\/ },
+ *   protocolsSecurityConfig: { riskLevel: 'low' },
  *   chain: { /* ... *\/ },
  *   coinbaseCDPConfig: { /* ... *\/ },
  *   integratorId: 'MyceliumApp',
  * };
- *
- * const sdk = new MyceliumSDK(config);
+ * const sdk = await MyceliumSDK.init(config);
  *
  * const {embeddedWalletId, smartWallet} = await sdk.wallet.createAccount();
  * const balance = await smartWallet.getBalance();
- * ```
- */
+ *  */
 export class MyceliumSDK {
   /**
    * Returns a unified wallet namespace to manage embedded/smart wallets and related operations
@@ -105,6 +114,9 @@ export class MyceliumSDK {
    */
   private protocol: BaseProtocol;
 
+  /** API client for the backend API */
+  apiClient: ApiClient | undefined;
+
   /**
    * Coinbase CDP instance to Coinbase related and onchain operations using Coinbase CDP API
    * @remarks
@@ -115,13 +127,73 @@ export class MyceliumSDK {
   private coinbaseCDP: CoinbaseCDPType | null = null;
 
   /**
+   * Initializes the SDK
+   * @param config SDK configuration (networks, wallets, protocol router settings)
+   * @returns SDK instance
+   */
+  async init(config: BasicMyceliumSDKConfig | MyceliumSDKConfig): Promise<MyceliumSDK> {
+    let finalConfig: MyceliumSDKConfig;
+    let isPremiumAvailable = false;
+
+    if ('apiKey' in config && config.apiKey) {
+      this.apiClient = new ApiClient(config.apiKey);
+      isPremiumAvailable = await this.apiClient.validate();
+
+      if (isPremiumAvailable) {
+        const apiResponse = await this.apiClient.sendRequest('config');
+
+        if (!apiResponse.success) {
+          throw new Error(apiResponse.error || 'Failed to get onchain config');
+        }
+
+        const config: OnchainConfig = apiResponse.data as unknown as OnchainConfig;
+
+        finalConfig = {
+          integratorId: config.integratorId,
+          walletsConfig: {
+            embeddedWalletConfig: {
+              provider: {
+                type: 'privy',
+                providerConfig: {
+                  appId: config.privyAppId,
+                  appSecret: config.privyAppSecret,
+                },
+              },
+            },
+            smartWalletConfig: {
+              provider: {
+                type: 'default',
+              },
+            },
+          },
+          chain: {
+            chainId: config.chainId,
+            rpcUrl: config.rpcUrl,
+            bundlerUrl: config.bundlerUrl,
+          },
+          coinbaseCDPConfig: {
+            apiKeyId: config.coinbaseCdpApiKey,
+            apiKeySecret: config.coinbaseCdpApiKeySecret,
+          },
+        };
+
+        return new MyceliumSDK(finalConfig, isPremiumAvailable);
+      }
+    }
+
+    finalConfig = config as MyceliumSDKConfig;
+
+    return new MyceliumSDK(finalConfig, isPremiumAvailable);
+  }
+
+  /**
    * Creates a new SDK instance
    *
    * @param config SDK configuration (networks, wallets, protocol router settings)
    * @throws Throws if an unsupported wallet provider is given
    * @see MyceliumSDKConfig
    */
-  constructor(config: MyceliumSDKConfig) {
+  constructor(config: MyceliumSDKConfig, isPremiumAvailable: boolean) {
     this._chainManager = new ChainManager(
       config.chain || {
         chainId: base.id,
@@ -130,11 +202,11 @@ export class MyceliumSDK {
       },
     );
 
-    if (!config.chain) {
-      logger.warn(
-        'No chain config provided, using default public RPC and Bundler URLs',
-        'MyceliumSDK',
-      );
+    if (config.protocolsSecurityConfig) {
+      // protocolsRouterConfig is the abstract settings that are clear for a dev, e.g. risk level, basic apy, etc
+      this.protocol = this.selectProtocol(config.protocolsSecurityConfig, isPremiumAvailable);
+    } else {
+      throw new Error('Protocols router config is required');
     }
 
     if (config.coinbaseCDPConfig) {
@@ -147,13 +219,6 @@ export class MyceliumSDK {
 
       this.fundingNamespace = new FundingNamespace(this.coinbaseCDP);
     }
-
-    const protocolsRouterConfig = config.protocolsRouterConfig || {
-      riskLevel: 'low',
-    };
-
-    // protocolsRouterConfig is the abstract settings that are clear for a dev, e.g. risk level, basic apy, etc
-    this.protocol = this.selectProtocol(protocolsRouterConfig);
 
     this.wallet = this.createWalletNamespace(config.walletsConfig);
 
@@ -199,18 +264,19 @@ export class MyceliumSDK {
    * @param config Protocol router configuration (e.g. risk level)
    * @returns Selected protocol object of the type {@link Protocol}
    */
-  private selectProtocol(config: MyceliumSDKConfig['protocolsRouterConfig']): BaseProtocol {
-    // 1. Create a smart router with the given config
-    // 2. Smart router will fetch available protocols
-    // 3. Smart router will find the best protocol based on the given config
-    // 4. Smart router should somehow save selected protocols here for future use of this particular integrator
-    // 5. Smart router will return the best protocol here
-
-    const protocolRouter = new ProtocolRouter(config!, this.chainManager);
+  private selectProtocol(
+    config: MyceliumSDKConfig['protocolsSecurityConfig'],
+    isPremiumAvailable: boolean,
+  ): BaseProtocol {
+    const protocolRouter = new ProtocolRouter(this.chainManager, isPremiumAvailable);
 
     const protocol: BaseProtocol = protocolRouter.select();
 
-    protocol.init(this.chainManager);
+    if (!config) {
+      throw new Error('Protocols security config is required');
+    }
+
+    protocol.init(this.chainManager, config, this.apiClient);
 
     return protocol;
   }

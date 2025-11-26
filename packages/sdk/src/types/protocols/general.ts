@@ -26,10 +26,8 @@ export interface Protocol {
 /**
  * The protocols router config that defines which protocols should be used for an integrator
  */
-export interface ProtocolsRouterConfig {
+export interface ProtocolsSecurityConfig {
   riskLevel: 'low' | 'medium' | 'high';
-  minApy?: number;
-  apiKey?: string;
 }
 
 /**

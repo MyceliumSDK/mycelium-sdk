@@ -1,26 +1,55 @@
 import { BaseProtocol } from '@/protocols/base/BaseProtocol';
 import type { ChainManager } from '@/tools/ChainManager';
-import type { VaultBalance, VaultInfo, Vaults, VaultTxnResult } from '@/types/protocols/general';
+import type {
+  ProtocolsSecurityConfig,
+  VaultBalance,
+  VaultInfo,
+  Vaults,
+  VaultTxnResult,
+} from '@/types/protocols/general';
 import type { OperationCallDataType, ProxyVaults } from '@/types/protocols/proxy';
 import { encodeFunctionData, erc20Abi, parseUnits, type Address, type Hash } from 'viem';
 import type { SmartWallet } from '@/public/types';
-import { ApiClient } from '@/tools/ApiClient';
+import type { ApiClient } from '@/tools/ApiClient';
 
+/**
+ * Proxy protocol implementation that communicates with the backend to find optimal vaults
+ * and interact with optimal protocols
+ *
+ * @internal
+ * @category Protocols
+ * @remarks
+ * This class works as a proxy protocol class that:
+ * - Communicates with the backend API to discover and select optimal vaults
+ * - Interacts with optimal protocols based on security configuration
+ * - Handles all operations related to protocol interactions including deposits, withdrawals,
+ *   balance queries, and operation logging
+ * - Acts as an intermediary layer between the SDK and underlying DeFi protocols
+ */
 export class ProxyProtocol extends BaseProtocol {
   /** API client for the backend API */
   private apiClient!: ApiClient;
+
+  /** Protocols security config */
+  private protocolsSecurityConfig!: ProtocolsSecurityConfig;
 
   /**
    * Initialize the Spark protocol with the provided chain manager
    * @param chainManager Chain manager instance used for network operations
    */
-  async init(chainManager: ChainManager, apiKey: string): Promise<void> {
+  async init(
+    chainManager: ChainManager,
+    protocolsSecurityConfig: ProtocolsSecurityConfig,
+    apiClient: ApiClient,
+  ): Promise<void> {
     this.chainManager = chainManager;
     this.selectedChainId = chainManager.getSupportedChain();
 
     this.publicClient = chainManager.getPublicClient(this.selectedChainId!);
 
-    this.apiClient = new ApiClient(apiKey);
+    this.apiClient = apiClient;
+
+    this.protocolsSecurityConfig = protocolsSecurityConfig;
   }
 
   /**
@@ -71,6 +100,7 @@ export class ProxyProtocol extends BaseProtocol {
     nonStableVaultsLimit: number = 1,
   ): Promise<Vaults> {
     const pathParams = new URLSearchParams({
+      risk_level: this.protocolsSecurityConfig.riskLevel,
       chain_id: this.selectedChainId!.toString(),
       stable_vaults_limit: stableVaultsLimit.toString(),
       non_stable_vaults_limit: nonStableVaultsLimit.toString(),

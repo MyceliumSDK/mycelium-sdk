@@ -44,6 +44,12 @@ export class ApiClient {
     path: 'api/v1/public/valid',
   };
 
+  /** URL settings for the endpoint: get the config for services */
+  private readonly configUrlSettings: RequestSettings = {
+    method: 'GET',
+    path: 'api/v1/public/config',
+  };
+
   /** URL settings mapping with operation types */
   private readonly operationTypeToUrlSettings: Record<OperationType, RequestSettings> = {
     deposit: this.depositUrlSettings,
@@ -52,6 +58,7 @@ export class ApiClient {
     vaults: this.bestVaultUrlSettings,
     balances: this.balancesUrlSettings,
     apiKeyValidation: this.apiKeyValidUrlSettings,
+    config: this.configUrlSettings,
   };
 
   /** API key for the backend API */

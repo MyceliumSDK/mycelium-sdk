@@ -2,10 +2,8 @@ import type { SupportedChainId } from '@/constants/chains';
 import { availableProtocols } from '@/constants/protocols';
 import type { BaseProtocol } from '@/protocols/base/BaseProtocol';
 import { ProxyProtocol } from '@/protocols/implementations/ProxyProtocol';
-import { ProtocolRouterBase } from '@/router/base/ProtocolRouterBase';
-import { ApiClient } from '@/tools/ApiClient';
 import type { ChainManager } from '@/tools/ChainManager';
-import type { Protocol, ProtocolsRouterConfig } from '@/types/protocols/general';
+import type { Protocol } from '@/types/protocols/general';
 
 /**
  * Protocol Router
@@ -16,31 +14,21 @@ import type { Protocol, ProtocolsRouterConfig } from '@/types/protocols/general'
  * Selects and recommends protocols for yield strategies based on router configuration,
  * available protocols, and API key for paid protocols
  */
-export class ProtocolRouter extends ProtocolRouterBase {
-  private isPremiumAvailable: boolean = false;
+export class ProtocolRouter {
+  /** Chain manager instance for network access */
+  private readonly chainManager: ChainManager;
+
+  private readonly isApiKeyValid: boolean;
 
   /**
    * Initialize the protocol router
    * @param config Router configuration including risk level, min APY, and optional API key
    * @param chainManager Chain manager instance for network validation
    */
-  constructor(config: ProtocolsRouterConfig, chainManager: ChainManager) {
-    super(config.riskLevel, chainManager, config.minApy, config.apiKey);
-
-    this.checkIfPremiumAvailable();
-  }
-
-  /**
-   * Async method to check if the API key is valid
-   * @returns True if the API key is valid
-   */
-  private async checkIfPremiumAvailable(): Promise<void> {
-    if (this.apiKey) {
-      const apiClient = new ApiClient(this.apiKey);
-      const isKeyValid = await apiClient.validate();
-
-      this.isPremiumAvailable = isKeyValid;
-    }
+  constructor(chainManager: ChainManager, isApiKeyValid: boolean) {
+    // this.riskLevel = config.riskLevel;
+    this.chainManager = chainManager;
+    this.isApiKeyValid = isApiKeyValid;
   }
 
   /**
@@ -50,7 +38,6 @@ export class ProtocolRouter extends ProtocolRouterBase {
    * @returns Array of available protocol definitions
    */
   getActivePublicProtocols(): Protocol[] {
-    // Include all publicly available protocols
     const allAvailableProtocols = availableProtocols.filter((protocol) => {
       return protocol.info.isActive;
     });
@@ -81,24 +68,20 @@ export class ProtocolRouter extends ProtocolRouterBase {
    * @returns Protocol instance considered the best match
    */
   select(): BaseProtocol {
-    if (this.isPremiumAvailable) {
+    if (this.isApiKeyValid) {
       return new ProxyProtocol();
     }
 
     const protocols = this.getActivePublicProtocols();
 
-    // Filter protocols that match the risk level. Later on add more conditions for the recommendation
     const eligibleProtocols = protocols.filter((protocol) => {
-      // Check if protocol matches risk level
-      const riskMatches = protocol.info.riskLevel === this.riskLevel;
-
       const isSupportedChain = this.isProtocolSupportedChain(protocol.info.supportedChains);
 
-      return riskMatches && isSupportedChain;
+      return isSupportedChain;
     });
 
     if (eligibleProtocols.length === 0) {
-      throw new Error(`No protocols available for risk level: ${this.riskLevel}`);
+      throw new Error(`No protocols available`);
     }
 
     // For now, we just return the first protocol from public protocols that matches the risk level
