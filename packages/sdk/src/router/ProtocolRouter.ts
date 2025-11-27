@@ -26,7 +26,6 @@ export class ProtocolRouter {
    * @param chainManager Chain manager instance for network validation
    */
   constructor(chainManager: ChainManager, isApiKeyValid: boolean) {
-    // this.riskLevel = config.riskLevel;
     this.chainManager = chainManager;
     this.isApiKeyValid = isApiKeyValid;
   }

@@ -131,32 +131,32 @@ export class MyceliumSDK {
    * @param config SDK configuration (networks, wallets, protocol router settings)
    * @returns SDK instance
    */
-  async init(config: BasicMyceliumSDKConfig | MyceliumSDKConfig): Promise<MyceliumSDK> {
+  static async init(config: BasicMyceliumSDKConfig | MyceliumSDKConfig): Promise<MyceliumSDK> {
     let finalConfig: MyceliumSDKConfig;
     let isPremiumAvailable = false;
 
     if ('apiKey' in config && config.apiKey) {
-      this.apiClient = new ApiClient(config.apiKey);
-      isPremiumAvailable = await this.apiClient.validate();
+      const apiClient = new ApiClient(config.apiKey);
+      isPremiumAvailable = await apiClient.validate();
 
       if (isPremiumAvailable) {
-        const apiResponse = await this.apiClient.sendRequest('config');
+        const apiResponse = await apiClient.sendRequest('config');
 
         if (!apiResponse.success) {
           throw new Error(apiResponse.error || 'Failed to get onchain config');
         }
 
-        const config: OnchainConfig = apiResponse.data as unknown as OnchainConfig;
+        const backendConfig: OnchainConfig = apiResponse.data as unknown as OnchainConfig;
 
         finalConfig = {
-          integratorId: config.integratorId,
+          integratorId: backendConfig.integratorId,
           walletsConfig: {
             embeddedWalletConfig: {
               provider: {
                 type: 'privy',
                 providerConfig: {
-                  appId: config.privyAppId,
-                  appSecret: config.privyAppSecret,
+                  appId: backendConfig.privyAppId,
+                  appSecret: backendConfig.privyAppSecret,
                 },
               },
             },
@@ -167,23 +167,27 @@ export class MyceliumSDK {
             },
           },
           chain: {
-            chainId: config.chainId,
-            rpcUrl: config.rpcUrl,
-            bundlerUrl: config.bundlerUrl,
+            chainId: backendConfig.chainId,
+            rpcUrl: backendConfig.rpcUrl,
+            bundlerUrl: backendConfig.bundlerUrl,
           },
+          protocolsSecurityConfig: config.protocolsSecurityConfig,
           coinbaseCDPConfig: {
-            apiKeyId: config.coinbaseCdpApiKey,
-            apiKeySecret: config.coinbaseCdpApiKeySecret,
+            apiKeyId: backendConfig.coinbaseCdpApiKey,
+            apiKeySecret: backendConfig.coinbaseCdpApiKeySecret,
           },
         };
 
-        return new MyceliumSDK(finalConfig, isPremiumAvailable);
+        const sdk = new MyceliumSDK(finalConfig, isPremiumAvailable, apiClient);
+        sdk.apiClient = apiClient;
+        return sdk;
       }
     }
 
     finalConfig = config as MyceliumSDKConfig;
 
-    return new MyceliumSDK(finalConfig, isPremiumAvailable);
+    const sdk = new MyceliumSDK(finalConfig, isPremiumAvailable);
+    return sdk;
   }
 
   /**
@@ -193,7 +197,7 @@ export class MyceliumSDK {
    * @throws Throws if an unsupported wallet provider is given
    * @see MyceliumSDKConfig
    */
-  constructor(config: MyceliumSDKConfig, isPremiumAvailable: boolean) {
+  constructor(config: MyceliumSDKConfig, isPremiumAvailable: boolean, apiClient?: ApiClient) {
     this._chainManager = new ChainManager(
       config.chain || {
         chainId: base.id,
@@ -204,7 +208,11 @@ export class MyceliumSDK {
 
     if (config.protocolsSecurityConfig) {
       // protocolsRouterConfig is the abstract settings that are clear for a dev, e.g. risk level, basic apy, etc
-      this.protocol = this.selectProtocol(config.protocolsSecurityConfig, isPremiumAvailable);
+      this.protocol = this.selectProtocol(
+        config.protocolsSecurityConfig,
+        isPremiumAvailable,
+        apiClient,
+      );
     } else {
       throw new Error('Protocols router config is required');
     }
@@ -267,6 +275,7 @@ export class MyceliumSDK {
   private selectProtocol(
     config: MyceliumSDKConfig['protocolsSecurityConfig'],
     isPremiumAvailable: boolean,
+    apiClient?: ApiClient,
   ): BaseProtocol {
     const protocolRouter = new ProtocolRouter(this.chainManager, isPremiumAvailable);
 
@@ -276,7 +285,8 @@ export class MyceliumSDK {
       throw new Error('Protocols security config is required');
     }
 
-    protocol.init(this.chainManager, config, this.apiClient);
+    // console.log('protocol selected:', protocol);
+    protocol.init(this.chainManager, config, apiClient);
 
     return protocol;
   }

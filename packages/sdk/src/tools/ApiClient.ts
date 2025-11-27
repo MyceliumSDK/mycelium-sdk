@@ -100,7 +100,7 @@ export class ApiClient {
       method,
       url: requestPath,
       data: body,
-      headers: { Authorization: this.apiKey, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${this.apiKey}`, 'Content-Type': 'application/json' },
     });
 
     if (response.status !== 200) {
