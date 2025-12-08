@@ -35,7 +35,7 @@ export class ApiClient {
   /** URL settings for the endpoint: get the balances of a user by a provided address */
   private readonly balancesUrlSettings: RequestSettings = {
     method: 'GET',
-    path: 'api/v1/public/protocols/details/:protocolId/balances',
+    path: 'api/v1/public/user/:userAddress/balances',
   };
 
   /** URL settings for the endpoint: validate the API key */
@@ -81,19 +81,25 @@ export class ApiClient {
    */
   async sendRequest(
     operationType: OperationType,
-    params?: URLSearchParams,
+    params?: Record<string, string>,
     protocolId?: string,
     body?: Record<string, string | VaultInfo>,
   ): Promise<ApiResponse<unknown>> {
     const { path, method } = this.operationTypeToUrlSettings[operationType];
 
+    const urlParams = new URLSearchParams(params).toString();
+
     let requestPath = path;
+    // TODO: Make processing of params in a request more clear
     if (protocolId) {
       requestPath = requestPath.replace(':protocolId', protocolId);
     }
+    if (params?.userAddress) {
+      requestPath = requestPath.replace(':userAddress', params.userAddress);
+    }
 
-    if (params) {
-      requestPath += `?${new URLSearchParams(params).toString()}`;
+    if (urlParams) {
+      requestPath += `?${urlParams}`;
     }
 
     const response: AxiosResponse<ApiResponse<unknown>> = await this.client.request({

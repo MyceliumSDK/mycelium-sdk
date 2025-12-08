@@ -106,7 +106,7 @@ export abstract class SmartWallet {
    * @category Yield
    * @returns Promise resolving to a {@link VaultBalance} or null if none
    */
-  abstract getEarnBalances(vaultInfo: VaultInfo): Promise<VaultBalance[] | null>;
+  abstract getEarnBalances(): Promise<VaultBalance[] | null>;
 
   /**
    * Withdraws a specific amount of shares from the protocol vault

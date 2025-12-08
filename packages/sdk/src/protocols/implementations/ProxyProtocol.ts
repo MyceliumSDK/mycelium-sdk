@@ -7,7 +7,7 @@ import type {
   Vaults,
   VaultTxnResult,
 } from '@/types/protocols/general';
-import type { OperationCallDataType, ProxyVaults } from '@/types/protocols/proxy';
+import type { OperationCallDataType, ProxyBalance, ProxyVaults } from '@/types/protocols/proxy';
 import { encodeFunctionData, erc20Abi, parseUnits, type Address, type Hash } from 'viem';
 import type { SmartWallet } from '@/public/types';
 import type { ApiClient } from '@/tools/ApiClient';
@@ -68,7 +68,7 @@ export class ProxyProtocol extends BaseProtocol {
     vaultInfo: VaultInfo,
     chainId: number,
     amount: string,
-    operationType: 'deposit' | 'withdraw',
+    operationType: 'deposit' | 'withdrawal',
     operationStatus: 'completed' | 'failed',
   ): Promise<void> {
     const apiResponse = await this.apiClient.sendRequest('log', undefined, undefined, {
@@ -99,12 +99,12 @@ export class ProxyProtocol extends BaseProtocol {
     stableVaultsLimit: number = 1,
     nonStableVaultsLimit: number = 1,
   ): Promise<Vaults> {
-    const pathParams = new URLSearchParams({
+    const pathParams = {
       risk_level: this.protocolsSecurityConfig.riskLevel,
       chain_id: this.selectedChainId!.toString(),
       stable_vaults_limit: stableVaultsLimit.toString(),
       non_stable_vaults_limit: nonStableVaultsLimit.toString(),
-    });
+    };
 
     const apiResponse = await this.apiClient.sendRequest('vaults', pathParams);
 
@@ -187,7 +187,7 @@ export class ProxyProtocol extends BaseProtocol {
       vaultInfo.protocolId,
       {
         vaultInfo,
-        amount,
+        amount: amount.toString(),
         chainId: this.selectedChainId!.toString(),
       },
     );
@@ -196,9 +196,9 @@ export class ProxyProtocol extends BaseProtocol {
       throw new Error(apiResponse.error || 'Failed to receive deposit operations call data');
     }
 
-    const receivedOperationsCallData = apiResponse.data as unknown as OperationCallDataType[];
+    const receivedOperationsCallData = apiResponse.data as unknown as OperationCallDataType;
 
-    operationsCallData.push(...receivedOperationsCallData);
+    operationsCallData.push(receivedOperationsCallData);
 
     const hash = await smartWallet.sendBatch(operationsCallData, this.selectedChainId!);
 
@@ -231,19 +231,34 @@ export class ProxyProtocol extends BaseProtocol {
   ): Promise<VaultTxnResult> {
     const currentAddress = await smartWallet.getAddress();
 
+    const earningBalances = await smartWallet.getEarnBalances();
+
+    if (!earningBalances) {
+      throw new Error('No earning balances found');
+    }
+
+    const earningBalance = earningBalances.find((balance) => balance.vaultInfo.id === vaultInfo.id);
+
+    if (!earningBalance) {
+      throw new Error('No earning balance found');
+    }
+    const balanceInfo = earningBalance.balance as ProxyBalance;
+
+    const amountToWithdraw = amount ? amount : balanceInfo.currentBalance;
+
     const apiResponse = await this.apiClient.sendRequest(
       'withdraw',
       undefined,
       vaultInfo.protocolId,
       {
         vaultInfo,
-        amount,
+        amount: amountToWithdraw,
         chainId: this.selectedChainId!.toString(),
       },
     );
 
     if (!apiResponse.success) {
-      throw new Error(apiResponse.error || 'Failed to receive withdraw operations call data');
+      throw new Error('Failed to receive withdraw operations call data');
     }
 
     const withdrawOperationCallData = apiResponse.data as unknown as OperationCallDataType;
@@ -257,8 +272,8 @@ export class ProxyProtocol extends BaseProtocol {
       hash,
       vaultInfo,
       this.selectedChainId!,
-      amount,
-      'deposit',
+      amountToWithdraw,
+      'withdrawal',
       operationStatus,
     );
 
@@ -272,11 +287,11 @@ export class ProxyProtocol extends BaseProtocol {
    * @returns Balances of the user in the protocol vaults
    */
   async getBalances(walletAddress: Address, protocolId?: string): Promise<VaultBalance[]> {
-    const pathParams = new URLSearchParams({
+    const pathParams = {
       chain_id: this.selectedChainId!.toString(),
       protocol_id: protocolId || '',
-      user_address: walletAddress,
-    });
+      userAddress: walletAddress,
+    };
 
     const apiResponse = await this.apiClient.sendRequest('balances', pathParams);
 

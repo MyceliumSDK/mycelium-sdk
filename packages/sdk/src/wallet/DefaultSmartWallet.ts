@@ -264,7 +264,7 @@ export class DefaultSmartWallet extends SmartWallet {
       return hash;
     } catch (error) {
       throw new Error(
-        `Failed to send transaction: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Failed to send transaction: ${error instanceof Error ? error.message.toString().slice(0, 100) : 'Unknown error'}`,
       );
     }
   }

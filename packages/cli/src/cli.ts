@@ -1,6 +1,12 @@
 import * as readline from 'readline';
-import { MyceliumSDK, type MyceliumSDKConfig, type SmartWallet } from '@mycelium-sdk/core';
-import { getEnv } from './utils';
+import {
+  MyceliumSDK,
+  type MyceliumSDKConfig,
+  type SmartWallet,
+  type VaultInfo,
+  type Vaults,
+} from '@mycelium-sdk/core';
+import { formatBalancesToDisplay, formatVaultInfoToDisplay, getEnv } from './utils';
 import { WalletDatabase } from './database';
 
 export class CLI {
@@ -8,6 +14,9 @@ export class CLI {
   private sdk: MyceliumSDK | null = null;
   private wallet: SmartWallet | null = null;
   private embeddedWalletId: string | null = null;
+
+  private currentBestVaults: Vaults | null = null;
+  private currentUserSelectedVault: VaultInfo | null = null;
 
   private db: WalletDatabase;
 
@@ -54,7 +63,7 @@ export class CLI {
     console.log('✅ SDK initialized successfully!\n');
   }
   catch(error: unknown) {
-    console.error('❌ Failed to initialize SDK:', error);
+    // console.error('❌ Failed to initialize SDK:', error);
     throw error;
   }
 
@@ -63,7 +72,11 @@ export class CLI {
     console.log('1. Create account');
     console.log('2. Login to account');
     console.log('3. Get best vaults');
-    console.log('4. View Wallet Details');
+    console.log('4. View wallet details');
+    console.log('5. Get earning balances');
+    console.log('6. Top up from faucet');
+    console.log('7. Deposit to vault');
+    console.log('8. Withdraw from vault');
     console.log('9. Exit');
     console.log(''); // Empty line
   }
@@ -124,6 +137,18 @@ export class CLI {
         case '4':
           await this.viewWalletDetails();
           break;
+        case '5':
+          await this.getEarningBalances();
+          break;
+        case '6':
+          await this.topUpFromFaucet();
+          break;
+        case '7':
+          await this.depositToVault();
+          break;
+        case '8':
+          await this.withdrawFromVault();
+          break;
         case '9':
         case 'exit':
           console.log('👋 Exiting CLI. Goodbye!');
@@ -135,7 +160,9 @@ export class CLI {
       }
 
       // Add a small divider for visual separation of "previous response"
-      if (running) {console.log('\n==================================\n');}
+      if (running) {
+        console.log('\n==================================\n');
+      }
     }
 
     this.rl.close();
@@ -204,10 +231,10 @@ export class CLI {
       return;
     }
 
-    const bestVaults = await this.sdk.protocols.getBestVaults();
+    this.currentBestVaults = await this.sdk.protocols.getBestVaults();
 
     console.log('💰 Best Vaults:');
-    console.log(bestVaults);
+    console.log(this.currentBestVaults);
   }
 
   private async viewWalletDetails() {
@@ -218,8 +245,183 @@ export class CLI {
       return;
     }
 
+    const address = await this.wallet.getAddress();
+    const balances = await this.wallet.getBalance();
+
+    console.log({ balances });
+
     console.log('💰 Wallet Details:');
-    console.log(`   Address: ${await this.wallet.getAddress()}`);
+    console.log(`   Address: ${address}`);
+    console.log(
+      `   Balances: ${balances.map((balance) => `${balance.symbol}: ${balance.totalFormattedBalance}`).join('\n')}`,
+    );
+  }
+
+  private async getEarningBalances() {
+    if (!this.wallet) {
+      console.log(
+        "⚠️  You didn't login. Please select Option 1 or 2 first to login or create an account",
+      );
+      return;
+    }
+
+    const earningBalances = await this.wallet.getEarnBalances();
+
+    if (!earningBalances) {
+      console.log('❌ No earning balances found');
+      return;
+    }
+
+    const formattedBalances = earningBalances.map((balance) => ({
+      vaultInfo: balance.vaultInfo,
+      currentBalance: balance.balance?.currentBalance ?? '0',
+    }));
+
+    console.log('💰 Earnings balance details:');
+    console.log(formatBalancesToDisplay(formattedBalances));
+  }
+
+  private async topUpFromFaucet() {
+    if (!this.wallet) {
+      console.log(
+        "❌ You didn't login. Please select Option 1 or 2 first to login or create an account",
+      );
+      return;
+    }
+
+    const walletAddress = await this.wallet.getAddress();
+
+    const response = await fetch(`${process.env.BLOCKCHAIN_SERVICE_HOSTNAME}/drop-funds`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: walletAddress,
+        amountUsdc: '100',
+        amountEth: '0.1',
+      }),
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.ok) {
+      console.log('❌ Failed to drop funds');
+      console.log(data.error);
+      return;
+    }
+    console.log('✅ Funds dropped successfully');
+  }
+
+  private async depositToVault() {
+    if (!this.sdk || !this.wallet) {
+      console.log(
+        "❌ You didn't login. Please select Option 1 or 2 first to login or create an account",
+      );
+      return;
+    }
+
+    this.currentBestVaults = await this.sdk.protocols.getBestVaults();
+
+    const availableVaults = [
+      ...this.currentBestVaults.stable,
+      ...this.currentBestVaults.nonStable,
+    ].map((vault, index) => {
+      return {
+        optionId: index + 1,
+        vaultInfo: vault,
+      };
+    });
+
+    const formattedVaultsInfo = formatVaultInfoToDisplay(availableVaults);
+
+    const balances = await this.wallet.getBalance();
+    const usdcBalance =
+      balances.find((balance) => balance.symbol === 'USDC')?.totalFormattedBalance ?? '0';
+
+    console.log('💰 Available vaults:');
+    console.log(formattedVaultsInfo);
+
+    const optionToDeposit = await this.ask('📧 Enter the option to deposit: ');
+    const selectedVault = availableVaults.find(
+      (vault) => vault.optionId === parseInt(optionToDeposit),
+    );
+    if (!selectedVault) {
+      console.log('❌ Invalid option');
+      return;
+    }
+
+    const amountToDeposit = await this.ask(
+      `📧 Enter the amount to deposit (current USDC balance: ${usdcBalance}): `,
+    );
+    if (!amountToDeposit || parseFloat(amountToDeposit) > parseFloat(usdcBalance)) {
+      console.log('❌ Invalid amount');
+      return;
+    }
+
+    console.log('💰 Depositing to vault...');
+    const result = await this.wallet.earn(selectedVault.vaultInfo, amountToDeposit);
+    console.log('💰 Deposit completed:', result.hash);
+  }
+
+  private async withdrawFromVault() {
+    if (!this.sdk || !this.wallet) {
+      console.log(
+        "❌ You didn't login. Please select Option 1 or 2 first to login or create an account",
+      );
+      return;
+    }
+
+    const earningBalances = await this.wallet.getEarnBalances();
+
+    if (!earningBalances) {
+      console.log('❌ No earning balances found');
+      return;
+    }
+
+    const balances = [...earningBalances].map((vault, index) => {
+      return {
+        optionId: index + 1,
+        vaultInfo: vault.vaultInfo,
+        currentBalance: vault.balance?.currentBalance ?? '0',
+      };
+    });
+
+    const formattedBalances = formatBalancesToDisplay(balances);
+
+    console.log('💰 Balances per vault:');
+    console.log(formattedBalances);
+
+    const optionToWithdraw = await this.ask('📧 Select a vault to withdraw from: ');
+    const selectedVault = balances.find((vault) => vault.optionId === parseInt(optionToWithdraw));
+    if (!selectedVault) {
+      console.log('❌ Invalid option');
+      return;
+    }
+
+    console.log('💰 Selected vault:', selectedVault.vaultInfo);
+
+    const currentVaultBalance = selectedVault.currentBalance;
+
+    console.log(`📧 Current vault balance: ${currentVaultBalance}`);
+    const amountToWithdraw = await this.ask(
+      `📧 Enter the amount to withdraw (hit "enter" to withdraw all balance): `,
+    );
+    if (
+      amountToWithdraw &&
+      (isNaN(parseFloat(amountToWithdraw)) ||
+        parseFloat(amountToWithdraw) <= 0 ||
+        parseFloat(amountToWithdraw) > parseFloat(currentVaultBalance))
+    ) {
+      console.log('❌ Invalid amount');
+      return;
+    }
+
+    console.log('💰 Withdrawing from vault...');
+    const result = await this.wallet.withdraw(selectedVault.vaultInfo, amountToWithdraw);
+    console.log('💰 Withdraw completed:', result.hash);
   }
 
   private ask(question: string): Promise<string> {
