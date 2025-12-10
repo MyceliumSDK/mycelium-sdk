@@ -5,6 +5,9 @@ type Data = {
   wallets: { email: string; embeddedWalletId: string; createdAt: string }[];
 };
 
+/**
+ * Database class for storing wallet information in the demo purpose
+ */
 export class WalletDatabase {
   private db: Low<Data> | undefined;
 

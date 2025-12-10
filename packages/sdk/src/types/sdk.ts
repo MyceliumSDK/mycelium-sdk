@@ -81,6 +81,7 @@ export interface MyceliumSDKConfig {
  */
 export interface BasicMyceliumSDKConfig {
   apiKey: string;
+  chainId?: number;
   protocolsSecurityConfig: ProtocolsSecurityConfig;
   overrides?: Partial<MyceliumSDKConfig>;
 }

@@ -1,5 +1,5 @@
 /** @public @category Types */
-
+export type { ProxyBalance } from '@/types/protocols/proxy';
 export type { TokenBalance } from '@/types/token';
 export type { VaultTxnResult, VaultBalance, Vaults, VaultInfo } from '@/types/protocols/general';
 export type { SmartWallet } from '@/wallet/base/wallets/SmartWallet';

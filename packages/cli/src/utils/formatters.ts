@@ -1,4 +1,4 @@
-import type { VaultInfo } from 'packages/sdk/dist';
+import { type VaultInfo } from '@mycelium-sdk/core';
 
 export const getEnv = (env: string): string => {
   const value = process.env[env];
@@ -46,7 +46,7 @@ export const formatBalancesToDisplay = (
 };
 
 export const formatVaultInfoToDisplay = (
-  vaultsInfo: { optionId: number; vaultInfo: VaultInfo }[],
+  vaultsInfo: { optionId?: number; vaultInfo: VaultInfo }[],
 ) => {
   return vaultsInfo
     .map(

@@ -167,7 +167,7 @@ export class MyceliumSDK {
             },
           },
           chain: {
-            chainId: backendConfig.chainId,
+            chainId: config.chainId || backendConfig.chainId,
             rpcUrl: backendConfig.rpcUrl,
             bundlerUrl: backendConfig.bundlerUrl,
           },

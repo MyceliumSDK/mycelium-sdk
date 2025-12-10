@@ -226,6 +226,7 @@ export class SparkProtocol extends BaseProtocol {
       throw new Error('Public client not initialized');
     }
 
+    // TODO: Support multiple options of Spark vaults
     // Use just one spark vault in this implementation
     const vaultInfo = SPARK_VAULT[0]!;
 

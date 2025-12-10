@@ -1,3 +1,7 @@
+# UPD 10.12: OUTDATED AND NOT SUPPORTED SO FAR
+
+Check more relevant SDK demo app in `./packages/cli`
+
 ## Mycelium app
 
 The frontend package demonstrates SDK integration with a Next.js application featuring:
