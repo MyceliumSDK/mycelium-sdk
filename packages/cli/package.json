@@ -4,8 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "start": "bun run src/index.ts",
+    "buildSdk": "pnpm run --filter @mycelium-sdk/core build",
+    "start": "pnpm run buildSdk && pnpm exec tsx src/index.ts",
     "build": "tsc"
   },
   "dependencies": {
