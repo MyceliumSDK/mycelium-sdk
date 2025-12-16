@@ -32,6 +32,9 @@ export interface ProxyBalance {
   vaultAddress: Address;
   chainId: number;
   currentBalance: string;
+  actualCurrentBalance: string;
+  pnl: number;
+  balanceInShares: string;
   earnedOverall: string;
   earned7d: string;
   earned30d: string;

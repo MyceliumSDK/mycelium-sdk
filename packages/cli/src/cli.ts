@@ -238,7 +238,7 @@ export class CLI {
       const currentBalance = balance.balance as ProxyBalance;
       return {
         vaultInfo: balance.vaultInfo,
-        currentBalance: currentBalance.currentBalance ?? '0',
+        currentBalance: currentBalance,
       };
     });
 
@@ -351,7 +351,7 @@ export class CLI {
       return {
         optionId: index + 1,
         vaultInfo: vault.vaultInfo,
-        currentBalance: currentBalance.currentBalance ?? '0',
+        currentBalance: currentBalance,
       };
     });
 
@@ -371,14 +371,14 @@ export class CLI {
 
     const currentVaultBalance = selectedVault.currentBalance;
 
-    logState(`Current vault balance: ${currentVaultBalance}`);
+    logState(`Current vault balance: ${currentVaultBalance.actualCurrentBalance}`);
     const amountToWithdraw = await this.ask(
       `Enter the amount to withdraw (hit "enter" to withdraw all balance): `,
     );
     if (
       amountToWithdraw &&
       (!isValidAmountFormat(amountToWithdraw) ||
-        parseFloat(amountToWithdraw) > parseFloat(currentVaultBalance))
+        parseFloat(amountToWithdraw) > parseFloat(currentVaultBalance.actualCurrentBalance))
     ) {
       logError('Invalid amount');
       return;

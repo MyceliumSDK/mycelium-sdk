@@ -1,4 +1,4 @@
-import { type VaultInfo } from '@mycelium-sdk/core';
+import { type ProxyBalance, type VaultInfo } from '@mycelium-sdk/core';
 
 export const getEnv = (env: string): string => {
   const value = process.env[env];
@@ -27,7 +27,11 @@ const formatTvl = (tvl: number | string | undefined) => {
 };
 
 export const formatBalancesToDisplay = (
-  balances: { optionId?: number | undefined; vaultInfo: VaultInfo; currentBalance: string }[],
+  balances: {
+    optionId?: number | undefined;
+    vaultInfo: VaultInfo;
+    currentBalance: ProxyBalance;
+  }[],
 ) => {
   return balances
     .map(
@@ -37,7 +41,13 @@ export const formatBalancesToDisplay = (
     Vault address: ${balance.vaultInfo.vaultAddress}
     Vault chain: ${balance.vaultInfo.chain}
     Vault type: ${balance.vaultInfo.type}
-    Current balance: ${balance.currentBalance}
+    Current balance: ${balance.currentBalance.currentBalance}
+    PNL: ${balance.currentBalance.pnl}
+    Balance in shares: ${balance.currentBalance.balanceInShares}
+    Earned overall: ${balance.currentBalance.earnedOverall}
+    Earned 7d: ${balance.currentBalance.earned7d}
+    Earned 30d: ${balance.currentBalance.earned30d}
+    Earned 90d: ${balance.currentBalance.earned90d}
     Vault APY: ${formatApy(balance.vaultInfo.metadata?.apy)}
     Vault TVL: ${formatTvl(balance.vaultInfo.metadata?.poolTvlUsd)}
   `,
