@@ -23,7 +23,7 @@ export const createMockSmartWallet = (): SmartWallet => {
       ),
     sendTokens: vi.fn().mockResolvedValue({} as TransactionData),
     earn: vi.fn().mockResolvedValue({ hash: '0xhash', success: true }),
-    getEarnBalance: vi.fn().mockResolvedValue(null),
+    getEarnBalances: vi.fn().mockResolvedValue(null),
     withdraw: vi.fn().mockResolvedValue({ hash: '0xhash', success: true }),
   } as unknown as SmartWallet;
 };

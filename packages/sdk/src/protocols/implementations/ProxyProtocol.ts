@@ -258,7 +258,7 @@ export class ProxyProtocol extends BaseProtocol {
     );
 
     if (!apiResponse.success) {
-      throw new Error('Failed to receive withdraw operations call data');
+      throw new Error(apiResponse.error || 'Failed to receive withdraw operations call data');
     }
 
     const withdrawOperationCallData = apiResponse.data as unknown as OperationCallDataType;

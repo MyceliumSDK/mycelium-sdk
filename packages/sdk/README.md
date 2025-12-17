@@ -43,7 +43,11 @@ pnpm run build
 
 The built SDK can then be used in your application or imported as a local library
 
-## Initialization Example
+## Initialization
+
+### Self hosted version
+
+If you're using a self hosted version, you can define all you're env variables as described below:
 
 ```typescript
 this.sdk = new MyceliumSDK({
@@ -71,10 +75,56 @@ this.sdk = new MyceliumSDK({
   protocolsRouterConfig: {
     riskLevel: 'medium',
   },
+  coinbaseCDPConfig: {
+    apiKeyId: NEXT_PUBLIC_COINBASE_CDP_API_KEY_ID,
+    apiKeySecret: process.env.NEXT_PUBLIC_COINBASE_CDP_API_KEY_SECRET,
+  },
+  integratorId: 'demo-app',
 });
 ```
 
-> To get more information about what protocols and chains are available for SDK, refer to the `Protocol router` section below
+### Cloud version
+
+In case, if you have an API key from a cloud version, you can define the SDK as the following:
+
+```javascript
+this.sdk = await MyceliumSDK.init({
+  apiKey,
+  chainId: '8453',
+  protocolsSecurityConfig: {
+    riskLevel: 'low',
+  },
+});
+```
+
+> To get more information about `protocolSecurityConfig` settings, please refer to the `Integrated protocols` section below
+
+## Protocol security config
+
+Current config of settings used by `Protocol router` to define:
+
+1. What protocols will be used by SDK
+2. What savings vaults will be recommended by SDK
+
+Currently, the following settings for the config are available:
+
+- `riskLevel` define the risk level of a protocol that will be used by an integrator to recommend saving vaults
+  Risk level is determined by the general popularity and reputation of the protocol within the crypto industry. No independent risk assessment is performed by the SDK to determine the risk level
+
+## Integrated protocols
+
+Currently, the following list of protocols is integrated into SDK and can be used by user in self-hosted and cloud versions:
+
+| Protocol                    | Chain | ChainId | Protocol risk level | Available on             |
+| --------------------------- | ----- | ------- | ------------------- | ------------------------ |
+| [Spark](https://spark.fi/)  | Base  | 8453    | low                 | Self hosted version only |
+| [Beefy](https://beefy.com/) | Base  | 8453    | low                 | Cloud version only       |
+
+The protocol router mechanism of SDK select the best protocol based on your `protocolSecurityConfig` settings as well as on other provided settings. The only requirement from an integrator is to define a high-level settings for protocols, e.g. min APY, protocol risk level, etc
+
+The SDK will use settings and find the best protocol and vault under the hood. No one, including integrator, will need to care about this part
+
+More protocol and chains will be added soon
 
 ## Local development
 
@@ -120,21 +170,6 @@ pnpm run docs:dev
 
 The chain configuration provided during SDK initialization defines where on-chain activities will take place. Currently, only one chain is supported for the `earn` functionality, with multi-chain support coming soon
 The example configuration above uses Base chain (chain ID: 8453), meaning all protocol operations and vault deposits will occur on the Base network
-
-## Protocol router
-
-Protocol router is the key component of the SDK that helps an integrator (app/web2 product) to select the best protocol and vault to deposit user's funds.
-The only requirement from an integrator is to define a high-level settings for protocols, e.g. min APY, protocol risk level, etc
-
-The SDK will use settings and find the best protocol and vault under the hood. No one, including integrator, will need to care about this part
-
-The full list of protocol and chains along with they can be used is the following:
-
-| Protocol                   | Chain | ChainId |
-| -------------------------- | ----- | ------- |
-| [Spark](https://spark.fi/) | Base  | 8453    |
-
-More protocol and chains will be added soon
 
 ## Contribution
 

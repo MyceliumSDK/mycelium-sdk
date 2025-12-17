@@ -1,4 +1,4 @@
-import { type ProxyBalance, type VaultInfo } from '@mycelium-sdk/core';
+import type { ProxyBalance, VaultInfo } from '@mycelium-sdk/sdk';
 
 export const getEnv = (env: string): string => {
   const value = process.env[env];

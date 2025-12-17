@@ -87,8 +87,6 @@ export class ApiClient {
   ): Promise<ApiResponse<unknown>> {
     const { path, method } = this.operationTypeToUrlSettings[operationType];
 
-    const urlParams = new URLSearchParams(params).toString();
-
     let requestPath = path;
     // TODO: Make processing of params in a request more clear
     if (protocolId) {
@@ -96,7 +94,10 @@ export class ApiClient {
     }
     if (params?.userAddress) {
       requestPath = requestPath.replace(':userAddress', params.userAddress);
+      delete params.userAddress; // Remove from query params since it's in the path
     }
+
+    const urlParams = new URLSearchParams(params).toString();
 
     if (urlParams) {
       requestPath += `?${urlParams}`;
