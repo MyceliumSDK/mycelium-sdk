@@ -94,7 +94,7 @@ export class ApiClient {
     }
     if (params?.userAddress) {
       requestPath = requestPath.replace(':userAddress', params.userAddress);
-      delete params.userAddress; // Remove from query params since it's in the path
+      delete params.userAddress;
     }
 
     const urlParams = new URLSearchParams(params).toString();
