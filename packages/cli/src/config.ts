@@ -25,7 +25,7 @@ export const getEnvsConfig = () => {
       bundlerUrl: getEnv('BUNDLER_URL'),
     },
     protocolsSecurityConfig: {
-      riskLevel: 'low',
+      riskLevel: getEnv('PROTOCOL_RISK_LEVEL'),
     },
     coinbaseCDPConfig: {
       apiKeyId: getEnv('COINBASE_CDP_API_KEY_ID'),
