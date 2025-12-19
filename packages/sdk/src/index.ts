@@ -285,7 +285,6 @@ export class MyceliumSDK {
       throw new Error('Protocols security config is required');
     }
 
-    // console.log('protocol selected:', protocol);
     protocol.init(this.chainManager, config, apiClient);
 
     return protocol;

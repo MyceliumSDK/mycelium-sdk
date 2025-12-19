@@ -72,7 +72,7 @@ export class SparkProtocol extends BaseProtocol {
 
     const apy = Math.exp(Math.log(ssr) * SECONDS_PER_YEAR) - 1;
 
-    return Number((apy * 100).toFixed(2));
+    return apy;
   }
 
   /**
@@ -229,6 +229,7 @@ export class SparkProtocol extends BaseProtocol {
     // TODO: Support multiple options of Spark vaults
     // Use just one spark vault in this implementation
     const vaultInfo = SPARK_VAULT[0]!;
+    vaultInfo.metadata!.apy = await this.getAPY();
 
     const shares = await this.publicClient.readContract({
       address: vaultInfo.vaultAddress,

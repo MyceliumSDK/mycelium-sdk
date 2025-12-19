@@ -45,10 +45,15 @@ export class CLI {
   }
 
   private async initializeSDK() {
-    const apiKey = getEnv('API_KEY');
+    let apiKey = null;
+    try {
+      apiKey = getEnv('API_KEY');
+    } catch (error) {
+      logError('Failed to get API key', error);
+    }
 
     if (apiKey) {
-      logState('Initializing SDK with API key from environment...');
+      logState('Initializing SDK with API key...');
       this.sdk = await MyceliumSDK.init({
         apiKey,
         chainId: parseInt(getEnv('CHAIN_ID')),
@@ -57,6 +62,7 @@ export class CLI {
         },
       });
     } else {
+      logState('Initializing SDK with custom configuration...');
       const config = await this.getFullConfig();
       this.sdk = await MyceliumSDK.init(config);
     }
@@ -229,20 +235,31 @@ export class CLI {
 
     const earningBalances = (await this.wallet.getEarnBalances()) as VaultBalance[];
 
+    console.log('earningBalances:', earningBalances);
+
     if (!earningBalances) {
-      logError('No earning balances found');
+      logError('No earning balances found. You have not deposited any funds yet');
       return;
     }
 
-    const formattedBalances = earningBalances.map((balance) => {
-      const currentBalance = balance.balance as ProxyBalance;
-      return {
-        vaultInfo: balance.vaultInfo,
-        currentBalance: currentBalance,
-      };
-    });
+    const formattedBalances = earningBalances
+      .filter((balance) => balance.balance !== null)
+      .map((balance) => {
+        const currentBalance = balance.balance as ProxyBalance;
+        return {
+          vaultInfo: balance.vaultInfo,
+          currentBalance: currentBalance,
+        };
+      });
+
+    if (formattedBalances.length === 0) {
+      logResult('No earning balances found. You have not deposited any funds yet');
+      return;
+    }
 
     const earnings = formatBalancesToDisplay(formattedBalances);
+
+    console.log('earnings:', earnings);
 
     logState('Earnings balance details:');
     logResult(`You current earnings:\n ${earnings ? earnings : 'Oops, nothing so far...'}`);

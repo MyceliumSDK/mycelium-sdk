@@ -30,7 +30,7 @@ export const formatBalancesToDisplay = (
   balances: {
     optionId?: number | undefined;
     vaultInfo: VaultInfo;
-    currentBalance: ProxyBalance;
+    currentBalance: ProxyBalance | string;
   }[],
 ) => {
   return balances
@@ -41,15 +41,15 @@ export const formatBalancesToDisplay = (
     Vault address: ${balance.vaultInfo.vaultAddress}
     Vault chain: ${balance.vaultInfo.chain}
     Vault type: ${balance.vaultInfo.type}
-    Current balance: ${balance.currentBalance.currentBalance}
-    PNL: ${balance.currentBalance.pnl}
-    Balance in shares: ${balance.currentBalance.balanceInShares}
-    Earned overall: ${balance.currentBalance.earnedOverall}
-    Earned 7d: ${balance.currentBalance.earned7d}
-    Earned 30d: ${balance.currentBalance.earned30d}
-    Earned 90d: ${balance.currentBalance.earned90d}
-    Vault APY: ${formatApy(balance.vaultInfo.metadata?.apy)}
-    Vault TVL: ${formatTvl(balance.vaultInfo.metadata?.poolTvlUsd)}
+    Current balance: ${balance.currentBalance.currentBalance || balance.currentBalance}
+    PNL: ${balance.currentBalance.pnl || 'N/A'}
+    Balance in shares: ${balance.currentBalance.balanceInShares || 'N/A'}
+    Earned overall: ${balance.currentBalance.earnedOverall || 'N/A'}
+    Earned 7d: ${balance.currentBalance.earned7d || 'N/A'}
+    Earned 30d: ${balance.currentBalance.earned30d || 'N/A'}
+    Earned 90d: ${balance.currentBalance.earned90d || 'N/A'}
+    Vault APY: ${formatApy(balance.vaultInfo.metadata?.apy) || 'N/A'}
+    Vault TVL: ${formatTvl(balance.vaultInfo.metadata?.poolTvlUsd) || 'N/A'}
   `,
     )
     .join('\n');

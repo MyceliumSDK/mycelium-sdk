@@ -15,7 +15,7 @@ export const availableProtocols: Protocol[] = [
       logo: '/logos/spark.png',
       supportedChains: [8453],
       riskLevel: 'low',
-      isActive: false,
+      isActive: true,
     },
     instance: new SparkProtocol(),
   },

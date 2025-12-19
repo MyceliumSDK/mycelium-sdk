@@ -329,16 +329,26 @@ describe('SparkProtocol integration tests', () => {
     it('should return balances for wallet address with shares', async () => {
       const walletAddress = '0x1234567890123456789012345678901234567890' as Address;
       const mockPublicClient = chainManager.getPublicClient(8453);
+      const mockSSR = BigInt('1050000000000000000000000000');
       const mockShares = BigInt('1000000000');
       const mockAssets = BigInt('1050000000'); // Assets converted from shares
 
+      // Mock getSSR call (used by getAPY)
       vi.mocked(mockPublicClient.readContract as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce(mockShares)
-        .mockResolvedValueOnce(mockAssets);
+        .mockResolvedValueOnce(mockSSR) // For getAPY -> getSSR
+        .mockResolvedValueOnce(mockShares) // For balanceOf
+        .mockResolvedValueOnce(mockAssets); // For convertToAssets
 
       vi.mocked(formatUnits).mockReturnValue('1050.0');
 
       const result = await sparkProtocol.getBalances(walletAddress);
+
+      // Verify getAPY was called (indirectly through getSSR)
+      expect(mockPublicClient.readContract).toHaveBeenCalledWith({
+        address: SPARK_SSR_ORACLE_ADDRESS,
+        abi: SPARK_SSR_ORACLE_ABI,
+        functionName: 'getSSR',
+      });
 
       expect(mockPublicClient.readContract).toHaveBeenCalledWith({
         address: mockVaultInfo.vaultAddress,
@@ -359,19 +369,34 @@ describe('SparkProtocol integration tests', () => {
       expect(result).toHaveLength(1);
       expect(result[0]?.vaultInfo.id).toBe('sUSDC');
       expect(result[0]?.balance).toBe('1050.0');
+      expect(result[0]?.vaultInfo.metadata?.apy).toBeDefined();
+      expect(typeof result[0]?.vaultInfo.metadata?.apy).toBe('number');
     });
 
     it('should return null balance when wallet has no shares', async () => {
       const walletAddress = '0x1234567890123456789012345678901234567890' as Address;
       const mockPublicClient = chainManager.getPublicClient(8453);
+      const mockSSR = BigInt('1050000000000000000000000000');
 
-      vi.mocked(mockPublicClient.readContract as ReturnType<typeof vi.fn>).mockResolvedValue(0n);
+      vi.mocked(mockPublicClient.readContract as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(mockSSR)
+        .mockResolvedValueOnce(0n);
+
+      // vi.mocked(mockPublicClient.readContract as ReturnType<typeof vi.fn>).mockResolvedValue(0n);
 
       const result = await sparkProtocol.getBalances(walletAddress);
+
+      expect(mockPublicClient.readContract).toHaveBeenCalledWith({
+        address: SPARK_SSR_ORACLE_ADDRESS,
+        abi: SPARK_SSR_ORACLE_ABI,
+        functionName: 'getSSR',
+      });
 
       expect(result).toHaveLength(1);
       expect(result[0]?.balance).toBeNull();
       expect(result[0]?.vaultInfo.id).toBe('sUSDC');
+      expect(result[0]?.vaultInfo.metadata?.apy).toBeDefined();
+      expect(typeof result[0]?.vaultInfo.metadata?.apy).toBe('number');
     });
 
     it('should throw error when public client is not initialized', async () => {
