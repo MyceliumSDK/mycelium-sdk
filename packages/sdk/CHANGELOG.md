@@ -1,5 +1,11 @@
 # @mycelium-sdk/core
 
+## 1.0.0-alpha.1
+
+### Major Changes
+
+- 12684f3: 1. Integrated a ProxyProtocol class to interact with a backend for a cloud version 2. Added a support of a cloud version through API keys. Currently in Beta 3. Changed the SDK initializing 4. Changed the response format for SDK methods, including for protocols
+
 ## 1.0.0-alpha.0
 
 ### Major Changes
