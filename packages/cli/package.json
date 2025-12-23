@@ -6,8 +6,7 @@
   "scripts": {
     "buildSdk": "pnpm run --filter @mycelium-sdk/core build",
     "start": "pnpm run buildSdk && pnpm exec tsx src/index.ts",
-    "dev": "pnpm exec tsx src/index.ts",
-    "build": "tsc"
+    "dev": "pnpm exec tsx src/index.ts"
   },
   "dependencies": {
     "@mycelium-sdk/core": "workspace:*",
