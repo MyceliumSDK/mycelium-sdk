@@ -382,8 +382,6 @@ describe('SparkProtocol integration tests', () => {
         .mockResolvedValueOnce(mockSSR)
         .mockResolvedValueOnce(0n);
 
-      // vi.mocked(mockPublicClient.readContract as ReturnType<typeof vi.fn>).mockResolvedValue(0n);
-
       const result = await sparkProtocol.getBalances(walletAddress);
 
       expect(mockPublicClient.readContract).toHaveBeenCalledWith({

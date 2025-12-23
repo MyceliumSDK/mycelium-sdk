@@ -16,7 +16,8 @@ The Mycelium CLI is an interactive tool that lets you:
 
 ### Prerequisites
 
-- Node.js or Bun installed
+- Node.js installed
+- pnpm installed
 - All configured envs on `.env` file (API key is in beta right now)
 
 ### Setup
@@ -26,7 +27,7 @@ The Mycelium CLI is an interactive tool that lets you:
 
 2. Create a `.env` file with your configuration:
 
-3. Make sure you run a blockchain service in `packages/blockchain` to have access to a faucet
+3. [Optional, if you're using a fork] Make sure you run a blockchain service in `packages/blockchain` to have access to a faucet
 
 4. Run the CLI:
 

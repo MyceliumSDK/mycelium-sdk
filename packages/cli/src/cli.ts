@@ -220,6 +220,8 @@ export class CLI {
     const address = await this.wallet.getAddress();
     const balances = await this.wallet.getBalance();
 
+    console.log('balances:', balances);
+
     logResult('Wallet details:\n');
     logResult(`Address: ${address}`);
     logResult(
@@ -234,8 +236,6 @@ export class CLI {
     }
 
     const earningBalances = (await this.wallet.getEarnBalances()) as VaultBalance[];
-
-    console.log('earningBalances:', earningBalances);
 
     if (!earningBalances) {
       logError('No earning balances found. You have not deposited any funds yet');
