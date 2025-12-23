@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ApiClient } from '@mycelium/sdk/tools/ApiClient';
-import type { ApiResponse } from '@mycelium/sdk/types/api';
-import type { VaultInfo } from '@mycelium/sdk/public/types';
+import { ApiClient } from '@mycelium-sdk/core/tools/ApiClient';
+import type { ApiResponse } from '@mycelium-sdk/core/types/api';
+import type { VaultInfo } from '@mycelium-sdk/core/public/types';
 import type { Address } from 'viem';
 import axios, { type AxiosInstance } from 'axios';
 

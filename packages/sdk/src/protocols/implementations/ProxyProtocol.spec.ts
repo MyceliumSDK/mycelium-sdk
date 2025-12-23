@@ -1,20 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ProxyProtocol } from '@mycelium/sdk/protocols/implementations/ProxyProtocol';
-import { createMockChainManager } from '@mycelium/sdk/test/mocks/ChainManagerMock';
-import { createMockSmartWallet } from '@mycelium/sdk/test/mocks/SmartWalletMock';
-import type { ChainManager } from '@mycelium/sdk/tools/ChainManager';
-import type { ApiClient } from '@mycelium/sdk/tools/ApiClient';
-import type { SmartWallet } from '@mycelium/sdk/wallet/base/wallets/SmartWallet';
+import { ProxyProtocol } from '@mycelium-sdk/core/protocols/implementations/ProxyProtocol';
+import { createMockChainManager } from '@mycelium-sdk/core/test/mocks/ChainManagerMock';
+import { createMockSmartWallet } from '@mycelium-sdk/core/test/mocks/SmartWalletMock';
+import type { ChainManager } from '@mycelium-sdk/core/tools/ChainManager';
+import type { ApiClient } from '@mycelium-sdk/core/tools/ApiClient';
+import type { SmartWallet } from '@mycelium-sdk/core/wallet/base/wallets/SmartWallet';
 import type {
   ProtocolsSecurityConfig,
   VaultInfo,
   VaultBalance,
-} from '@mycelium/sdk/types/protocols/general';
+} from '@mycelium-sdk/core/types/protocols/general';
 import type {
   ProxyVaults,
   ProxyBalance,
   OperationCallDataType,
-} from '@mycelium/sdk/types/protocols/proxy';
+} from '@mycelium-sdk/core/types/protocols/proxy';
 import { encodeFunctionData, erc20Abi, parseUnits, type Address, type Hash } from 'viem';
 
 // Mock viem functions

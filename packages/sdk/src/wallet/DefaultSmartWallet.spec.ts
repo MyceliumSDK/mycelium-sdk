@@ -3,20 +3,20 @@ import { toCoinbaseSmartAccount } from 'viem/account-abstraction';
 import { baseSepolia, unichain } from 'viem/chains';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { smartWalletFactoryAbi } from '@mycelium/sdk/abis/smartWalletFactory';
-import { smartWalletFactoryAddress } from '@mycelium/sdk/constants/addresses';
-import type { ChainManager } from '@mycelium/sdk/tools/ChainManager';
-import { createMockChainManager } from '@mycelium/sdk/test/mocks/ChainManagerMock';
-import { getRandomAddress } from '@mycelium/sdk/test/utils';
-import { DefaultSmartWallet } from '@mycelium/sdk/wallet/DefaultSmartWallet';
-import { createMockProtocol } from '@mycelium/sdk/test/mocks/ProtocolMock';
-import type { TransactionData } from '@mycelium/sdk/types/transaction';
-import { createMockCoinbaseCDP } from '@mycelium/sdk/test/mocks/CoinbaseCDPMock';
-import type { CoinbaseCDP } from '@mycelium/sdk/tools/CoinbaseCDP';
-import { onRampResponseMock } from '@mycelium/sdk/test/mocks/ramp/on-ramp';
-import { offRampResponseMock } from '@mycelium/sdk/test/mocks/ramp/off-ramp';
-import type { VaultInfo, VaultBalance } from '@mycelium/sdk/types/protocols/general';
-import { SPARK_VAULT } from '@mycelium/sdk/protocols/constants/spark';
+import { smartWalletFactoryAbi } from '@mycelium-sdk/core/abis/smartWalletFactory';
+import { smartWalletFactoryAddress } from '@mycelium-sdk/core/constants/addresses';
+import type { ChainManager } from '@mycelium-sdk/core/tools/ChainManager';
+import { createMockChainManager } from '@mycelium-sdk/core/test/mocks/ChainManagerMock';
+import { getRandomAddress } from '@mycelium-sdk/core/test/utils';
+import { DefaultSmartWallet } from '@mycelium-sdk/core/wallet/DefaultSmartWallet';
+import { createMockProtocol } from '@mycelium-sdk/core/test/mocks/ProtocolMock';
+import type { TransactionData } from '@mycelium-sdk/core/types/transaction';
+import { createMockCoinbaseCDP } from '@mycelium-sdk/core/test/mocks/CoinbaseCDPMock';
+import type { CoinbaseCDP } from '@mycelium-sdk/core/tools/CoinbaseCDP';
+import { onRampResponseMock } from '@mycelium-sdk/core/test/mocks/ramp/on-ramp';
+import { offRampResponseMock } from '@mycelium-sdk/core/test/mocks/ramp/off-ramp';
+import type { VaultInfo, VaultBalance } from '@mycelium-sdk/core/types/protocols/general';
+import { SPARK_VAULT } from '@mycelium-sdk/core/protocols/constants/spark';
 
 vi.mock('viem/account-abstraction', () => ({
   toCoinbaseSmartAccount: vi.fn(),

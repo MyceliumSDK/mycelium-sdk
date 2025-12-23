@@ -2,16 +2,16 @@ import { type Address, type LocalAccount, pad } from 'viem';
 import { type WebAuthnAccount } from 'viem/account-abstraction';
 import { describe, expect, it, vi } from 'vitest';
 
-import { smartWalletFactoryAbi } from '@mycelium/sdk/abis/smartWalletFactory';
-import { smartWalletFactoryAddress } from '@mycelium/sdk/constants/addresses';
-import type { ChainManager } from '@mycelium/sdk/tools/ChainManager';
-import { createMockChainManager } from '@mycelium/sdk/test/mocks/ChainManagerMock';
-import { getRandomAddress } from '@mycelium/sdk/test/utils';
-import { DefaultSmartWallet } from '@mycelium/sdk/wallet/DefaultSmartWallet';
-import { DefaultSmartWalletProvider } from '@mycelium/sdk/wallet/providers/DefaultSmartWalletProvider';
-import { createMockProtocol } from '@mycelium/sdk/test/mocks/ProtocolMock';
-import { createMockCoinbaseCDP } from '@mycelium/sdk/test/mocks/CoinbaseCDPMock';
-import type { CoinbaseCDP } from '@mycelium/sdk/tools/CoinbaseCDP';
+import { smartWalletFactoryAbi } from '@mycelium-sdk/core/abis/smartWalletFactory';
+import { smartWalletFactoryAddress } from '@mycelium-sdk/core/constants/addresses';
+import type { ChainManager } from '@mycelium-sdk/core/tools/ChainManager';
+import { createMockChainManager } from '@mycelium-sdk/core/test/mocks/ChainManagerMock';
+import { getRandomAddress } from '@mycelium-sdk/core/test/utils';
+import { DefaultSmartWallet } from '@mycelium-sdk/core/wallet/DefaultSmartWallet';
+import { DefaultSmartWalletProvider } from '@mycelium-sdk/core/wallet/providers/DefaultSmartWalletProvider';
+import { createMockProtocol } from '@mycelium-sdk/core/test/mocks/ProtocolMock';
+import { createMockCoinbaseCDP } from '@mycelium-sdk/core/test/mocks/CoinbaseCDPMock';
+import type { CoinbaseCDP } from '@mycelium-sdk/core/tools/CoinbaseCDP';
 
 const mockChainManager = createMockChainManager() as unknown as ChainManager;
 const mockProtocol = createMockProtocol();

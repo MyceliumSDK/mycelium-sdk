@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { SparkProtocol } from '@mycelium/sdk/protocols/implementations/SparkProtocol';
-import { createMockChainManager } from '@mycelium/sdk/test/mocks/ChainManagerMock';
-import { createMockSmartWallet } from '@mycelium/sdk/test/mocks/SmartWalletMock';
-import type { ChainManager } from '@mycelium/sdk/tools/ChainManager';
-import type { SmartWallet } from '@mycelium/sdk/wallet/base/wallets/SmartWallet';
-import type { VaultInfo } from '@mycelium/sdk/types/protocols/general';
+import { SparkProtocol } from '@mycelium-sdk/core/protocols/implementations/SparkProtocol';
+import { createMockChainManager } from '@mycelium-sdk/core/test/mocks/ChainManagerMock';
+import { createMockSmartWallet } from '@mycelium-sdk/core/test/mocks/SmartWalletMock';
+import type { ChainManager } from '@mycelium-sdk/core/tools/ChainManager';
+import type { SmartWallet } from '@mycelium-sdk/core/wallet/base/wallets/SmartWallet';
+import type { VaultInfo } from '@mycelium-sdk/core/types/protocols/general';
 import {
   encodeFunctionData,
   erc20Abi,
@@ -18,8 +18,8 @@ import {
   SPARK_SSR_ORACLE_ADDRESS,
   RAY,
   SECONDS_PER_YEAR,
-} from '@mycelium/sdk/protocols/constants/spark';
-import { SPARK_VAULT_ABI, SPARK_SSR_ORACLE_ABI } from '@mycelium/sdk/abis/protocols/spark';
+} from '@mycelium-sdk/core/protocols/constants/spark';
+import { SPARK_VAULT_ABI, SPARK_SSR_ORACLE_ABI } from '@mycelium-sdk/core/abis/protocols/spark';
 
 vi.mock('viem', async () => {
   const actual = await vi.importActual<any>('viem');

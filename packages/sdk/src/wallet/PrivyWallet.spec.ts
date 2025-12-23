@@ -3,11 +3,11 @@ import { type Address, createWalletClient, type LocalAccount, type WalletClient 
 import { unichain } from 'viem/chains';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ChainManager } from '@mycelium/sdk/tools/ChainManager';
-import { createMockChainManager } from '@mycelium/sdk/test/mocks/ChainManagerMock';
-import { createMockPrivyClient } from '@mycelium/sdk/test/mocks/PrivyClientMock';
-import { getRandomAddress } from '@mycelium/sdk/test/utils';
-import { PrivyWallet } from '@mycelium/sdk/wallet/PrivyWallet';
+import type { ChainManager } from '@mycelium-sdk/core/tools/ChainManager';
+import { createMockChainManager } from '@mycelium-sdk/core/test/mocks/ChainManagerMock';
+import { createMockPrivyClient } from '@mycelium-sdk/core/test/mocks/PrivyClientMock';
+import { getRandomAddress } from '@mycelium-sdk/core/test/utils';
+import { PrivyWallet } from '@mycelium-sdk/core/wallet/PrivyWallet';
 
 vi.mock('viem', async () => ({
   // @ts-ignore - importActual returns unknown

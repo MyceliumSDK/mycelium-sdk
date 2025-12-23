@@ -11,8 +11,7 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@mycelium/sdk/*": ["packages/sdk/src/*"],
-      "@mycelium/frontend/*": ["packages/frontend/src/*"]
+      "@mycelium-sdk/core/*": ["packages/sdk/src/*"]
     },
     "strict": true,
     "skipLibCheck": true,
@@ -25,7 +24,6 @@
   },
   "exclude": ["node_modules", "dist"],
   "references": [
-    { "path": "./packages/sdk" },
-    { "path": "./packages/frontend" }
+    { "path": "./packages/sdk" }
   ]
 }

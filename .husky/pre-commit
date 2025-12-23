@@ -10,7 +10,7 @@ echo "✅ Lint staged done"
 echo
 
 
-# echo "🧱 Building the project..."
-# pnpm build
-# echo "✅ Building done"
-# echo
+echo "🧱 Building the project..."
+pnpm build
+echo "✅ Building done"
+echo
