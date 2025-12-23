@@ -1,16 +1,16 @@
 import { isAddress } from 'viem';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ChainManager } from '@mycelium/sdk/tools/ChainManager';
-import { createMockChainManager } from '@mycelium/sdk/test/mocks/ChainManagerMock';
+import type { ChainManager } from '@mycelium-sdk/core/tools/ChainManager';
+import { createMockChainManager } from '@mycelium-sdk/core/test/mocks/ChainManagerMock';
 
-import { createMockPrivyClient } from '@mycelium/sdk/test/mocks/PrivyClientMock';
-import { PrivyWallet } from '@mycelium/sdk/wallet/PrivyWallet';
-import { PrivyEmbeddedWalletProvider } from '@mycelium/sdk/wallet/providers/PrivyEmbeddedWalletProvider';
+import { createMockPrivyClient } from '@mycelium-sdk/core/test/mocks/PrivyClientMock';
+import { PrivyWallet } from '@mycelium-sdk/core/wallet/PrivyWallet';
+import { PrivyEmbeddedWalletProvider } from '@mycelium-sdk/core/wallet/providers/PrivyEmbeddedWalletProvider';
 
 const mockChainManager = createMockChainManager() as unknown as ChainManager;
 
-describe('PrivyEmbeddedWalletProvider', () => {
+describe('PrivyEmbeddedWalletProvider integration tests', () => {
   it('should create a wallet via Privy API', async () => {
     const mockPrivyClient = createMockPrivyClient('test-app-id', 'test-app-secret');
     const createWalletSpy = vi.spyOn(mockPrivyClient.walletApi, 'createWallet');
@@ -81,7 +81,6 @@ describe('PrivyEmbeddedWalletProvider', () => {
     const provider = new PrivyEmbeddedWalletProvider(mockPrivyClient, mockChainManager);
     const walletId = 'invalid-wallet-id';
 
-    // This will naturally fail since the wallet doesn't exist
     await expect(provider.getWallet({ walletId })).rejects.toThrow(
       `Failed to get wallet with id: ${walletId}`,
     );

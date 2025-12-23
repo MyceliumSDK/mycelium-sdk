@@ -1,47 +1,32 @@
 import { vi } from 'vitest';
-import type { Protocol } from '@/types/protocols/general';
 import { createMockChainManager } from '@/test/mocks/ChainManagerMock';
-import { mockVaultInfo } from '@/test/mocks/protocols/spark';
-
+import { SPARK_VAULT } from '@/protocols/constants/spark';
+import type { BaseProtocol } from '@/protocols/base/BaseProtocol';
 /**
  * Mock Protocol for testing
  *  Provides a mock implementation of Protocol for testing purposes
  */
-export const createMockProtocol = (): Protocol => {
+export const createMockProtocol = (): BaseProtocol => {
   const mockChainManager = createMockChainManager();
 
   return {
-    instance: {
-      init: vi.fn(),
-      chainManager: mockChainManager,
-      getVaults: vi.fn().mockResolvedValue([mockVaultInfo]),
-      getBestVault: vi.fn().mockResolvedValue(mockVaultInfo),
-      fetchDepositedVaults: vi.fn().mockResolvedValue(mockVaultInfo),
-      deposit: vi.fn().mockResolvedValue({
-        hash: '0x3c36293ab6884794bda1271b570ca9e9b68a406e93486359e7213a30f88c349b',
-        success: true,
-      }),
-      withdraw: vi.fn().mockResolvedValue({
-        hash: '0x3c36293ab6884794bda1271b570ca9e9b68a406e93486359e7213a30f88c349b',
-        success: true,
-      }),
-      getBalance: vi
-        .fn()
-        .mockResolvedValue(100n)
-        .mockResolvedValue({ shares: '100', depositedAmount: '100', ppfs: '100' }),
-      approveToken: vi
-        .fn()
-        .mockResolvedValue('0x3c36293ab6884794bda1271b570ca9e9b68a406e93486359e7213a30f88c349b'),
-      checkAllowance: vi.fn().mockResolvedValue(100n),
-    } as unknown as Protocol['instance'],
-    info: {
-      id: 'mock-protocol',
-      name: 'Mock Protocol',
-      website: 'https://mock.com',
-      logo: 'mock-logo',
-      supportedChains: [8453],
-      riskLevel: 'low',
-      isPremium: false,
-    },
-  };
+    init: vi.fn(),
+    chainManager: mockChainManager,
+    getVaults: vi.fn().mockResolvedValue(SPARK_VAULT),
+    getBestVault: vi.fn().mockResolvedValue(SPARK_VAULT[0]),
+    fetchDepositedVaults: vi.fn().mockResolvedValue(SPARK_VAULT[0]),
+    deposit: vi.fn().mockResolvedValue({
+      hash: '0x3c36293ab6884794bda1271b570ca9e9b68a406e93486359e7213a30f88c349b',
+      success: true,
+    }),
+    withdraw: vi.fn().mockResolvedValue({
+      hash: '0x3c36293ab6884794bda1271b570ca9e9b68a406e93486359e7213a30f88c349b',
+      success: true,
+    }),
+    getBalances: vi.fn().mockResolvedValue([{ balance: '100', vaultInfo: SPARK_VAULT[0] }]),
+    approveToken: vi
+      .fn()
+      .mockResolvedValue('0x3c36293ab6884794bda1271b570ca9e9b68a406e93486359e7213a30f88c349b'),
+    checkAllowance: vi.fn().mockResolvedValue(100n),
+  } as unknown as BaseProtocol;
 };

@@ -4,7 +4,7 @@ import type { SupportedChainId } from '@/constants/chains';
 import type { TokenBalance } from '@/types/token';
 import type { AssetIdentifier } from '@/utils/assets';
 import type { TransactionData } from '@/types/transaction';
-import type { VaultBalance, VaultTxnResult } from '@/types/protocols/general';
+import type { VaultBalance, VaultInfo, VaultTxnResult } from '@/types/protocols/general';
 import type { OffRampUrlResponse, OnRampUrlResponse } from '@/types/ramp';
 
 /**
@@ -97,7 +97,7 @@ export abstract class SmartWallet {
    * @param amount Amount to deposit in human-readable format
    * @returns Promise resolving to a {@link VaultTxnResult}
    */
-  abstract earn(amount: string): Promise<VaultTxnResult>;
+  abstract earn(vaultInfo: VaultInfo, amount: string): Promise<VaultTxnResult>;
 
   /**
    * Retrieves the balance of deposited funds in the selected protocol vault
@@ -106,7 +106,7 @@ export abstract class SmartWallet {
    * @category Yield
    * @returns Promise resolving to a {@link VaultBalance} or null if none
    */
-  abstract getEarnBalance(): Promise<VaultBalance | null>;
+  abstract getEarnBalances(): Promise<VaultBalance[] | null>;
 
   /**
    * Withdraws a specific amount of shares from the protocol vault
@@ -116,7 +116,7 @@ export abstract class SmartWallet {
    * @param amount Human-readable amount of shares to withdraw
    * @returns Promise resolving to a {@link VaultTxnResult}
    */
-  abstract withdraw(amount: string): Promise<VaultTxnResult>;
+  abstract withdraw(vaultInfo: VaultInfo, amount: string): Promise<VaultTxnResult>;
 
   /**
    * Funds the smart wallet with the specified amount of the specified token via Coinbase CDP on-ramp service

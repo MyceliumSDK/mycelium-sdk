@@ -51,7 +51,8 @@
     "Vercel",
     "cashout",
     "offramp",
-    "labelcheck"
+    "labelcheck",
+    "Krupin"
   ],
   "enableFiletypes": ["!binary"],
   "overrides": [

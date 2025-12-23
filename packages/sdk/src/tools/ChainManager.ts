@@ -8,7 +8,6 @@ import {
 import { type SUPPORTED_CHAIN_IDS, CHAINS_MAP } from '@/constants/chains';
 import type { ChainConfig } from '@/types/chain';
 import { chainById } from '@/utils/chains';
-import { logger } from '@/tools/Logger';
 
 /**
  * Service for managing supported blockchain networks and their clients
@@ -87,7 +86,6 @@ export class ChainManager {
       throw new Error(`No bundler URL configured for chain ID: ${chainId}`);
     }
 
-    logger.info('Public client setup:', { bundlerUrl, chainId }, 'ChainManager');
     const client = createPublicClient({
       chain: this.getChain(chainId),
       transport: http(rpcUrl),

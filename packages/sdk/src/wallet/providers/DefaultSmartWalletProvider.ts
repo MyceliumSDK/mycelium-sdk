@@ -6,8 +6,8 @@ import { smartWalletFactoryAddress } from '@/constants/addresses';
 import type { ChainManager } from '@/tools/ChainManager';
 import { DefaultSmartWallet } from '@/wallet/DefaultSmartWallet';
 import { SmartWalletProvider } from '@/wallet/base/providers/SmartWalletProvider';
-import type { Protocol } from '@/types/protocols/general';
 import type { CoinbaseCDP } from '@/tools/CoinbaseCDP';
+import type { BaseProtocol } from '@/protocols/base/BaseProtocol';
 
 /**
  * Default provider for creating and managing ERC-4337 smart wallets
@@ -23,7 +23,7 @@ export class DefaultSmartWalletProvider extends SmartWalletProvider {
   private chainManager: ChainManager;
 
   /** Already initialized protocol provider instance */
-  private protocolProvider: Protocol['instance'];
+  private protocolProvider: BaseProtocol;
 
   /** Coinbase CDP instance to interact with Coinbase CDP API */
   private coinbaseCDP: CoinbaseCDP | null;
@@ -35,10 +35,10 @@ export class DefaultSmartWalletProvider extends SmartWalletProvider {
    * @param chainManager Manager for chains and viem clients
    * @param protocol Selected protocol descriptor that exposes an initialized instance
    */
-  constructor(chainManager: ChainManager, protocol: Protocol, coinbaseCDP: CoinbaseCDP | null) {
+  constructor(chainManager: ChainManager, protocol: BaseProtocol, coinbaseCDP: CoinbaseCDP | null) {
     super();
     this.chainManager = chainManager;
-    this.protocolProvider = protocol.instance;
+    this.protocolProvider = protocol;
     this.coinbaseCDP = coinbaseCDP;
   }
 

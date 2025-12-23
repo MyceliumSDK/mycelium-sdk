@@ -3,274 +3,430 @@ import { toCoinbaseSmartAccount } from 'viem/account-abstraction';
 import { baseSepolia, unichain } from 'viem/chains';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { smartWalletFactoryAbi } from '@mycelium/sdk/abis/smartWalletFactory';
-import { smartWalletFactoryAddress } from '@mycelium/sdk/constants/addresses';
-import type { ChainManager } from '@mycelium/sdk/tools/ChainManager';
-import { createMockChainManager } from '@mycelium/sdk/test/mocks/ChainManagerMock';
-import { getRandomAddress } from '@mycelium/sdk/test/utils';
-import { DefaultSmartWallet } from '@mycelium/sdk/wallet/DefaultSmartWallet';
-import { createMockProtocol } from '@mycelium/sdk/test/mocks/ProtocolMock';
-import type { TransactionData } from '@mycelium/sdk/types/transaction';
-import { createMockCoinbaseCDP } from '@mycelium/sdk/test/mocks/CoinbaseCDPMock';
-import type { CoinbaseCDP } from '@mycelium/sdk/tools/CoinbaseCDP';
-import { onRampResponseMock } from '@mycelium/sdk/test/mocks/ramp/on-ramp';
-import { offRampResponseMock } from '@mycelium/sdk/test/mocks/ramp/off-ramp';
+import { smartWalletFactoryAbi } from '@mycelium-sdk/core/abis/smartWalletFactory';
+import { smartWalletFactoryAddress } from '@mycelium-sdk/core/constants/addresses';
+import type { ChainManager } from '@mycelium-sdk/core/tools/ChainManager';
+import { createMockChainManager } from '@mycelium-sdk/core/test/mocks/ChainManagerMock';
+import { getRandomAddress } from '@mycelium-sdk/core/test/utils';
+import { DefaultSmartWallet } from '@mycelium-sdk/core/wallet/DefaultSmartWallet';
+import { createMockProtocol } from '@mycelium-sdk/core/test/mocks/ProtocolMock';
+import type { TransactionData } from '@mycelium-sdk/core/types/transaction';
+import { createMockCoinbaseCDP } from '@mycelium-sdk/core/test/mocks/CoinbaseCDPMock';
+import type { CoinbaseCDP } from '@mycelium-sdk/core/tools/CoinbaseCDP';
+import { onRampResponseMock } from '@mycelium-sdk/core/test/mocks/ramp/on-ramp';
+import { offRampResponseMock } from '@mycelium-sdk/core/test/mocks/ramp/off-ramp';
+import type { VaultInfo, VaultBalance } from '@mycelium-sdk/core/types/protocols/general';
+import { SPARK_VAULT } from '@mycelium-sdk/core/protocols/constants/spark';
 
 vi.mock('viem/account-abstraction', () => ({
   toCoinbaseSmartAccount: vi.fn(),
 }));
-const mockOwners: Address[] = ['0x123', '0x456'];
-const mockSigner: LocalAccount = {
-  address: '0x123',
-  type: 'local',
-} as unknown as LocalAccount;
-const mockChainManager = createMockChainManager() as unknown as ChainManager;
-const mockProtocol = createMockProtocol();
-const mockCoinbaseCDP: CoinbaseCDP = createMockCoinbaseCDP();
 
-describe('DefaultSmartWallet', () => {
-  it('should create a smart wallet instance', () => {
-    const wallet = new DefaultSmartWallet(
-      mockOwners,
-      mockSigner,
-      mockChainManager,
-      mockProtocol.instance,
-      mockCoinbaseCDP,
-    );
-    expect(wallet).toBeInstanceOf(DefaultSmartWallet);
+describe('DefaultSmartWallet integration tests', () => {
+  let mockOwners: Address[];
+  let mockSigner: LocalAccount;
+  let mockChainManager: ChainManager;
+  let mockProtocol: ReturnType<typeof createMockProtocol>;
+  let mockCoinbaseCDP: CoinbaseCDP;
+  let mockVaultInfo: VaultInfo;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetAllMocks();
+
+    mockOwners = [getRandomAddress(), getRandomAddress()];
+    mockSigner = {
+      address: mockOwners[0],
+      type: 'local',
+    } as unknown as LocalAccount;
+    mockChainManager = createMockChainManager() as unknown as ChainManager;
+    mockProtocol = createMockProtocol();
+    mockCoinbaseCDP = createMockCoinbaseCDP();
+    mockVaultInfo = SPARK_VAULT[0]!;
   });
 
-  it('should return the correct signer', () => {
-    const wallet = new DefaultSmartWallet(
-      mockOwners,
-      mockSigner,
-      mockChainManager,
-      mockProtocol.instance,
-      mockCoinbaseCDP,
-    );
-    expect(wallet.signer).toEqual(mockSigner);
-  });
+  describe('constructor and basic properties', () => {
+    it('should create a smart wallet instance', () => {
+      const wallet = new DefaultSmartWallet(
+        mockOwners,
+        mockSigner,
+        mockChainManager,
+        mockProtocol,
+        mockCoinbaseCDP,
+      );
+      expect(wallet).toBeInstanceOf(DefaultSmartWallet);
+    });
 
-  it('should get the wallet address', async () => {
-    const owners = [getRandomAddress(), getRandomAddress()];
-    const wallet = new DefaultSmartWallet(
-      owners,
-      mockSigner,
-      mockChainManager,
-      mockProtocol.instance,
-      mockCoinbaseCDP,
-    );
-    const mockAddress = getRandomAddress();
-    const publicClient = vi.mocked(mockChainManager.getPublicClient(baseSepolia.id));
-    publicClient.readContract = vi.fn().mockResolvedValue(mockAddress);
-
-    const address = await wallet.getAddress();
-
-    expect(address).toBe(mockAddress);
-    expect(publicClient.readContract).toHaveBeenCalledWith({
-      abi: smartWalletFactoryAbi,
-      address: smartWalletFactoryAddress,
-      functionName: 'getAddress',
-      args: [owners.map((owner) => pad(owner)), BigInt(0)],
+    it('should return the correct signer', () => {
+      const wallet = new DefaultSmartWallet(
+        mockOwners,
+        mockSigner,
+        mockChainManager,
+        mockProtocol,
+        mockCoinbaseCDP,
+      );
+      expect(wallet.signer).toEqual(mockSigner);
     });
   });
 
-  it('should return the deployment address', async () => {
-    const deploymentAddress = getRandomAddress();
-    const wallet = new DefaultSmartWallet(
-      mockOwners,
-      mockSigner,
-      mockChainManager,
-      mockProtocol.instance,
-      mockCoinbaseCDP,
-      deploymentAddress,
-    );
-    const address = await wallet.getAddress();
-    expect(address).toBe(deploymentAddress);
-  });
+  describe('getAddress', () => {
+    it('should get the wallet address from factory', async () => {
+      const wallet = new DefaultSmartWallet(
+        mockOwners,
+        mockSigner,
+        mockChainManager,
+        mockProtocol,
+        mockCoinbaseCDP,
+      );
+      const mockAddress = getRandomAddress();
+      const publicClient = vi.mocked(mockChainManager.getPublicClient(baseSepolia.id));
+      publicClient.readContract = vi.fn().mockResolvedValue(mockAddress);
 
-  it('should call toCoinbaseSmartAccount with correct arguments', async () => {
-    const deploymentAddress = getRandomAddress();
-    const signerOwnerIndex = 1;
-    const nonce = BigInt(123);
-    const wallet = new DefaultSmartWallet(
-      mockOwners,
-      mockSigner,
-      mockChainManager,
-      mockProtocol.instance,
-      mockCoinbaseCDP,
-      deploymentAddress,
-      signerOwnerIndex,
-      nonce,
-    );
-    const chainId = unichain.id;
-    await wallet.getCoinbaseSmartAccount(chainId);
+      const address = await wallet.getAddress();
 
-    const toCoinbaseSmartAccountMock = vi.mocked(toCoinbaseSmartAccount);
-    expect(toCoinbaseSmartAccountMock).toHaveBeenCalledWith({
-      address: deploymentAddress,
-      ownerIndex: signerOwnerIndex,
-      client: mockChainManager.getPublicClient(chainId),
-      owners: [wallet.signer],
-      nonce: nonce,
-      version: '1.1',
+      expect(address).toBe(mockAddress);
+      expect(publicClient.readContract).toHaveBeenCalledWith({
+        abi: smartWalletFactoryAbi,
+        address: smartWalletFactoryAddress,
+        functionName: 'getAddress',
+        args: [mockOwners.map((owner) => pad(owner)), BigInt(0)],
+      });
+    });
+
+    it('should return the deployment address when provided', async () => {
+      const deploymentAddress = getRandomAddress();
+      const wallet = new DefaultSmartWallet(
+        mockOwners,
+        mockSigner,
+        mockChainManager,
+        mockProtocol,
+        mockCoinbaseCDP,
+        deploymentAddress,
+      );
+      const address = await wallet.getAddress();
+      expect(address).toBe(deploymentAddress);
     });
   });
 
-  it('should send a transaction via ERC-4337', async () => {
-    const wallet = new DefaultSmartWallet(
-      mockOwners,
-      mockSigner,
-      mockChainManager,
-      mockProtocol.instance,
-      mockCoinbaseCDP,
-    );
-    const chainId = unichain.id;
-    const recipientAddress = getRandomAddress();
-    const value = BigInt(1000);
-    const data = '0x123';
-    const transactionData: TransactionData = {
-      to: recipientAddress,
-      value,
-      data,
-    };
-    const mockAccount = {
-      address: '0x123',
-      client: mockChainManager.getPublicClient(baseSepolia.id),
-      owners: [mockSigner],
-      nonce: BigInt(0),
-    } as any;
-    vi.mocked(toCoinbaseSmartAccount).mockResolvedValue(mockAccount);
-    const bundlerClient = mockChainManager.getBundlerClient(chainId, mockAccount);
+  describe('getCoinbaseSmartAccount', () => {
+    it('should call toCoinbaseSmartAccount with correct arguments', async () => {
+      const deploymentAddress = getRandomAddress();
+      const signerOwnerIndex = 1;
+      const nonce = BigInt(123);
+      const wallet = new DefaultSmartWallet(
+        mockOwners,
+        mockSigner,
+        mockChainManager,
+        mockProtocol,
+        mockCoinbaseCDP,
+        deploymentAddress,
+        signerOwnerIndex,
+        nonce,
+      );
+      const chainId = unichain.id;
+      await wallet.getCoinbaseSmartAccount(chainId);
 
-    vi.mocked(bundlerClient.sendUserOperation).mockResolvedValue('0xTransactionHash');
-
-    const result = await wallet.send(transactionData, chainId);
-
-    expect(mockChainManager.getBundlerClient).toHaveBeenCalledWith(chainId, mockAccount);
-    expect(bundlerClient.sendUserOperation).toHaveBeenCalledWith({
-      account: mockAccount,
-      calls: [transactionData],
-      callGasLimit: BigInt(140000),
-      verificationGasLimit: BigInt(140000),
-      preVerificationGas: BigInt(140000),
+      const toCoinbaseSmartAccountMock = vi.mocked(toCoinbaseSmartAccount);
+      expect(toCoinbaseSmartAccountMock).toHaveBeenCalledWith({
+        address: deploymentAddress,
+        ownerIndex: signerOwnerIndex,
+        client: mockChainManager.getPublicClient(chainId),
+        owners: [wallet.signer],
+        nonce: nonce,
+        version: '1.1',
+      });
     });
-    expect(bundlerClient.waitForUserOperationReceipt).toHaveBeenCalledWith({
-      hash: '0xTransactionHash',
-    });
-    expect(result).toBe('0xTransactionHash');
   });
 
-  it('should send a batch transaction via ERC-4337', async () => {
-    const wallet = new DefaultSmartWallet(
-      mockOwners,
-      mockSigner,
-      mockChainManager,
-      mockProtocol.instance,
-      mockCoinbaseCDP,
-    );
-    const chainId = unichain.id;
-    const recipientAddress = getRandomAddress();
-    const value = BigInt(1000);
-    const data = '0x123';
-    const transactionData: TransactionData[] = [
-      {
+  describe('send', () => {
+    it('should send a transaction via ERC-4337', async () => {
+      const wallet = new DefaultSmartWallet(
+        mockOwners,
+        mockSigner,
+        mockChainManager,
+        mockProtocol,
+        mockCoinbaseCDP,
+      );
+      const chainId = unichain.id;
+      const recipientAddress = getRandomAddress();
+      const value = BigInt(1000);
+      const data = '0x123';
+      const transactionData: TransactionData = {
         to: recipientAddress,
         value,
         data,
-      },
-    ];
-    const mockAccount = {
-      address: '0x123',
-      client: mockChainManager.getPublicClient(baseSepolia.id),
-      owners: [mockSigner],
-      nonce: BigInt(0),
-    } as any;
-    vi.mocked(toCoinbaseSmartAccount).mockResolvedValue(mockAccount);
-    const bundlerClient = mockChainManager.getBundlerClient(chainId, mockAccount);
+      };
+      const mockAccount = {
+        address: '0x123',
+        client: mockChainManager.getPublicClient(baseSepolia.id),
+        owners: [mockSigner],
+        nonce: BigInt(0),
+      } as any;
+      vi.mocked(toCoinbaseSmartAccount).mockResolvedValue(mockAccount);
+      const bundlerClient = mockChainManager.getBundlerClient(chainId, mockAccount);
 
-    vi.mocked(bundlerClient.sendUserOperation).mockResolvedValue('0xTransactionHash');
+      const mockGasEstimate = {
+        callGasLimit: BigInt(100000),
+        verificationGasLimit: BigInt(100000),
+        preVerificationGas: BigInt(100000),
+      };
+      vi.mocked(bundlerClient.estimateUserOperationGas).mockResolvedValue(mockGasEstimate);
+      vi.mocked(bundlerClient.sendUserOperation).mockResolvedValue('0xTransactionHash');
+      // vi.mocked(bundlerClient.waitForUserOperationReceipt).mockResolvedValue({
+      //   receipt: {} as unknown as TransactionReceipt,
+      // });
 
-    const result = await wallet.sendBatch(transactionData, chainId);
+      const result = await wallet.send(transactionData, chainId);
 
-    expect(mockChainManager.getBundlerClient).toHaveBeenCalledWith(chainId, mockAccount);
-    expect(bundlerClient.sendUserOperation).toHaveBeenCalledWith({
-      account: mockAccount,
-      calls: transactionData,
-      callGasLimit: BigInt(140000),
-      verificationGasLimit: BigInt(140000),
-      preVerificationGas: BigInt(140000),
+      expect(mockChainManager.getBundlerClient).toHaveBeenCalledWith(chainId, mockAccount);
+      expect(bundlerClient.estimateUserOperationGas).toHaveBeenCalledWith({
+        account: mockAccount,
+        calls: [transactionData],
+      });
+      expect(bundlerClient.sendUserOperation).toHaveBeenCalledWith({
+        account: mockAccount,
+        calls: [transactionData],
+        callGasLimit: expect.any(BigInt),
+        verificationGasLimit: expect.any(BigInt),
+        preVerificationGas: expect.any(BigInt),
+      });
+      expect(bundlerClient.waitForUserOperationReceipt).toHaveBeenCalledWith({
+        hash: '0xTransactionHash',
+      });
+      expect(result).toBe('0xTransactionHash');
     });
-    expect(bundlerClient.waitForUserOperationReceipt).toHaveBeenCalledWith({
-      hash: '0xTransactionHash',
+
+    it('should handle transaction errors', async () => {
+      const wallet = new DefaultSmartWallet(
+        mockOwners,
+        mockSigner,
+        mockChainManager,
+        mockProtocol,
+        mockCoinbaseCDP,
+      );
+      const chainId = unichain.id;
+      const transactionData: TransactionData = {
+        to: getRandomAddress(),
+        value: BigInt(1000),
+        data: '0x123',
+      };
+      const mockAccount = {
+        address: '0x123',
+        client: mockChainManager.getPublicClient(baseSepolia.id),
+        owners: [mockSigner],
+        nonce: BigInt(0),
+      } as any;
+      vi.mocked(toCoinbaseSmartAccount).mockResolvedValue(mockAccount);
+      const bundlerClient = mockChainManager.getBundlerClient(chainId, mockAccount);
+
+      const error = new Error('Transaction failed');
+      vi.mocked(bundlerClient.estimateUserOperationGas).mockRejectedValue(error);
+
+      await expect(wallet.send(transactionData, chainId)).rejects.toThrow(
+        'Failed to send transaction',
+      );
     });
-    expect(result).toBe('0xTransactionHash');
   });
 
-  it('should use earn method and deposit to a vault', async () => {
-    const wallet = new DefaultSmartWallet(
-      mockOwners,
-      mockSigner,
-      mockChainManager,
-      mockProtocol.instance,
-      mockCoinbaseCDP,
-    );
+  describe('sendBatch', () => {
+    it('should send a batch transaction via ERC-4337', async () => {
+      const wallet = new DefaultSmartWallet(
+        mockOwners,
+        mockSigner,
+        mockChainManager,
+        mockProtocol,
+        mockCoinbaseCDP,
+      );
+      const chainId = unichain.id;
+      const recipientAddress = getRandomAddress();
+      const value = BigInt(1000);
+      const data = '0x123';
+      const transactionData: TransactionData[] = [
+        {
+          to: recipientAddress,
+          value,
+          data,
+        },
+      ];
+      const mockAccount = {
+        address: '0x123',
+        client: mockChainManager.getPublicClient(baseSepolia.id),
+        owners: [mockSigner],
+        nonce: BigInt(0),
+      } as any;
+      vi.mocked(toCoinbaseSmartAccount).mockResolvedValue(mockAccount);
+      const bundlerClient = mockChainManager.getBundlerClient(chainId, mockAccount);
 
-    const depositSpy = vi.mocked(mockProtocol.instance).deposit as ReturnType<typeof vi.fn>;
+      const mockGasEstimate = {
+        callGasLimit: BigInt(100000),
+        verificationGasLimit: BigInt(100000),
+        preVerificationGas: BigInt(100000),
+      };
+      vi.mocked(bundlerClient.estimateUserOperationGas).mockResolvedValue(mockGasEstimate);
+      vi.mocked(bundlerClient.sendUserOperation).mockResolvedValue('0xTransactionHash');
+      // vi.mocked(bundlerClient.waitForUserOperationReceipt).mockResolvedValue({
+      //   receipt: {} as any,
+      // });
 
-    const amount = '1000';
+      const result = await wallet.sendBatch(transactionData, chainId);
 
-    const result = await wallet.earn(amount);
+      expect(mockChainManager.getBundlerClient).toHaveBeenCalledWith(chainId, mockAccount);
+      expect(bundlerClient.estimateUserOperationGas).toHaveBeenCalledWith({
+        account: mockAccount,
+        calls: transactionData,
+      });
+      expect(bundlerClient.sendUserOperation).toHaveBeenCalledWith({
+        account: mockAccount,
+        calls: transactionData,
+        callGasLimit: expect.any(BigInt),
+        verificationGasLimit: expect.any(BigInt),
+        preVerificationGas: expect.any(BigInt),
+      });
+      expect(bundlerClient.waitForUserOperationReceipt).toHaveBeenCalledWith({
+        hash: '0xTransactionHash',
+      });
+      expect(result).toBe('0xTransactionHash');
+    });
 
-    expect(depositSpy).toHaveBeenCalledWith(amount, wallet);
-    expect(result.hash).toBe('0x3c36293ab6884794bda1271b570ca9e9b68a406e93486359e7213a30f88c349b');
-    expect(result.success).toBe(true);
+    it('should handle batch transaction errors', async () => {
+      const wallet = new DefaultSmartWallet(
+        mockOwners,
+        mockSigner,
+        mockChainManager,
+        mockProtocol,
+        mockCoinbaseCDP,
+      );
+      const chainId = unichain.id;
+      const transactionData: TransactionData[] = [
+        {
+          to: getRandomAddress(),
+          value: BigInt(1000),
+          data: '0x123',
+        },
+      ];
+      const mockAccount = {
+        address: '0x123',
+        client: mockChainManager.getPublicClient(baseSepolia.id),
+        owners: [mockSigner],
+        nonce: BigInt(0),
+      } as any;
+      vi.mocked(toCoinbaseSmartAccount).mockResolvedValue(mockAccount);
+      const bundlerClient = mockChainManager.getBundlerClient(chainId, mockAccount);
+
+      const error = new Error('Batch transaction failed');
+      vi.mocked(bundlerClient.estimateUserOperationGas).mockRejectedValue(error);
+
+      await expect(wallet.sendBatch(transactionData, chainId)).rejects.toThrow(
+        'Failed to send transaction',
+      );
+    });
   });
 
-  it('should use withdraw method and withdraw from a vault', async () => {
-    const wallet = new DefaultSmartWallet(
-      mockOwners,
-      mockSigner,
-      mockChainManager,
-      mockProtocol.instance,
-      mockCoinbaseCDP,
-    );
+  describe('earn', () => {
+    it('should deposit to a vault using protocol provider', async () => {
+      const wallet = new DefaultSmartWallet(
+        mockOwners,
+        mockSigner,
+        mockChainManager,
+        mockProtocol,
+        mockCoinbaseCDP,
+      );
 
-    const withdrawSpy = vi.mocked(mockProtocol.instance).withdraw as ReturnType<typeof vi.fn>;
+      const depositSpy = vi.mocked(mockProtocol.deposit as ReturnType<typeof vi.fn>);
+      const amount = '1000';
 
-    const amount = '1000';
+      const result = await wallet.earn(mockVaultInfo, amount);
 
-    const result = await wallet.withdraw(amount);
-
-    expect(withdrawSpy).toHaveBeenCalledWith(amount, wallet);
-    expect(result.hash).toBe('0x3c36293ab6884794bda1271b570ca9e9b68a406e93486359e7213a30f88c349b');
-    expect(result.success).toBe(true);
+      expect(depositSpy).toHaveBeenCalledWith(mockVaultInfo, amount, wallet);
+      expect(result.hash).toBe(
+        '0x3c36293ab6884794bda1271b570ca9e9b68a406e93486359e7213a30f88c349b',
+      );
+      expect(result.success).toBe(true);
+    });
   });
 
-  it('should use getEarnBalance method and get the balance of the vault', async () => {
-    const wallet = new DefaultSmartWallet(
-      mockOwners,
-      mockSigner,
-      mockChainManager,
-      mockProtocol.instance,
-      mockCoinbaseCDP,
-    );
+  describe('withdraw', () => {
+    it('should withdraw from a vault using protocol provider', async () => {
+      const wallet = new DefaultSmartWallet(
+        mockOwners,
+        mockSigner,
+        mockChainManager,
+        mockProtocol,
+        mockCoinbaseCDP,
+      );
 
-    const result = await wallet.getEarnBalance();
+      const withdrawSpy = vi.mocked(mockProtocol.withdraw as ReturnType<typeof vi.fn>);
+      const amount = '1000';
 
-    expect(result).not.toBeNull();
-    expect(result?.shares).toBe('100');
-    expect(result?.depositedAmount).toBe('100');
+      const result = await wallet.withdraw(mockVaultInfo, amount);
+
+      expect(withdrawSpy).toHaveBeenCalledWith(mockVaultInfo, amount, wallet);
+      expect(result.hash).toBe(
+        '0x3c36293ab6884794bda1271b570ca9e9b68a406e93486359e7213a30f88c349b',
+      );
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe('getEarnBalances', () => {
+    it('should get balances from protocol provider', async () => {
+      const wallet = new DefaultSmartWallet(
+        mockOwners,
+        mockSigner,
+        mockChainManager,
+        mockProtocol,
+        mockCoinbaseCDP,
+      );
+
+      const mockBalances: VaultBalance[] = [
+        {
+          vaultInfo: mockVaultInfo,
+          balance: '1000',
+        },
+      ];
+
+      vi.mocked(mockProtocol.getBalances as ReturnType<typeof vi.fn>).mockResolvedValue(
+        mockBalances,
+      );
+
+      const result = await wallet.getEarnBalances();
+
+      expect(mockProtocol.getBalances).toHaveBeenCalledWith(await wallet.getAddress());
+      expect(result).toEqual(mockBalances);
+      expect(result).toHaveLength(1);
+      expect(result[0]?.vaultInfo).toEqual(mockVaultInfo);
+      expect(result[0]?.balance).toBe('1000');
+    });
+
+    it('should return empty array when no balances found', async () => {
+      const wallet = new DefaultSmartWallet(
+        mockOwners,
+        mockSigner,
+        mockChainManager,
+        mockProtocol,
+        mockCoinbaseCDP,
+      );
+
+      vi.mocked(mockProtocol.getBalances as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+
+      const result = await wallet.getEarnBalances();
+
+      expect(result).toEqual([]);
+    });
   });
 
   describe('topUp (on-ramp)', () => {
-    const wallet = new DefaultSmartWallet(
-      mockOwners,
-      mockSigner,
-      mockChainManager,
-      mockProtocol.instance,
-      mockCoinbaseCDP,
-    );
+    let wallet: DefaultSmartWallet;
+
+    beforeEach(() => {
+      wallet = new DefaultSmartWallet(
+        mockOwners,
+        mockSigner,
+        mockChainManager,
+        mockProtocol,
+        mockCoinbaseCDP,
+      );
+    });
 
     it('should generate a proper on-ramp link with all parameters', async () => {
       const amount = '100';
@@ -324,8 +480,8 @@ describe('DefaultSmartWallet', () => {
         [getRandomAddress()],
         mockSigner,
         mockChainManager,
-        mockProtocol.instance,
-        null, // No CoinbaseCDP
+        mockProtocol,
+        null,
       );
 
       await expect(
@@ -344,13 +500,17 @@ describe('DefaultSmartWallet', () => {
   });
 
   describe('cashOut (off-ramp)', () => {
-    const wallet = new DefaultSmartWallet(
-      mockOwners,
-      mockSigner,
-      mockChainManager,
-      mockProtocol.instance,
-      mockCoinbaseCDP,
-    );
+    let wallet: DefaultSmartWallet;
+
+    beforeEach(() => {
+      wallet = new DefaultSmartWallet(
+        mockOwners,
+        mockSigner,
+        mockChainManager,
+        mockProtocol,
+        mockCoinbaseCDP,
+      );
+    });
 
     it('should generate a proper off-ramp link with all parameters', async () => {
       const country = 'US';
@@ -406,7 +566,7 @@ describe('DefaultSmartWallet', () => {
         [getRandomAddress()],
         mockSigner,
         mockChainManager,
-        mockProtocol.instance,
+        mockProtocol,
         null,
       );
 
@@ -427,53 +587,83 @@ describe('DefaultSmartWallet', () => {
     });
   });
 
-  describe('integration scenarios', () => {
-    let mockCoinbaseCDP: CoinbaseCDP;
-    let mockChainManager: ChainManager;
+  describe('sendTokens', () => {
     let wallet: DefaultSmartWallet;
 
     beforeEach(() => {
-      vi.restoreAllMocks();
-      mockCoinbaseCDP = createMockCoinbaseCDP();
-      mockChainManager = createMockChainManager();
       wallet = new DefaultSmartWallet(
         mockOwners,
         mockSigner,
         mockChainManager,
-        mockProtocol.instance,
+        mockProtocol,
         mockCoinbaseCDP,
       );
     });
 
-    it('should handle complete on-ramp flow', async () => {
-      // Generate on-ramp link
-      const onRampResult = await wallet.topUp(
-        '100',
-        'https://mysite.com/success',
-        'USDC',
-        'USD',
-        'CARD',
-        'US',
-      );
+    it('should send ETH tokens', async () => {
+      const amount = 1.5;
+      const recipientAddress = getRandomAddress();
 
-      expect(onRampResult.session?.onrampUrl).toContain('pay.coinbase.com');
-      expect(onRampResult.quote).toBeDefined();
+      const result = await wallet.sendTokens(amount, 'eth', recipientAddress);
+
+      expect(result.to).toBe(recipientAddress);
+      expect(result.value).toBeGreaterThan(0n);
+      expect(result.data).toBe('0x');
     });
 
-    it('should handle complete off-ramp flow', async () => {
-      // Generate off-ramp link
-      const offRampResult = await wallet.cashOut(
-        'US',
-        'FIAT_WALLET',
-        'https://mysite.com/success',
-        '100',
-        'USD',
-        'USDC',
+    it('should send ERC20 tokens', async () => {
+      const amount = 100;
+      const recipientAddress = getRandomAddress();
+
+      const result = await wallet.sendTokens(amount, 'usdc', recipientAddress);
+
+      expect(result.to).toBeDefined();
+      expect(result.value).toBe(0n);
+      expect(result.data).toBeDefined();
+      expect(result.data).not.toBe('0x');
+    });
+
+    it('should throw error when recipient address is missing', async () => {
+      await expect(wallet.sendTokens(100, 'usdc', '' as Address)).rejects.toThrow(
+        'Recipient address is required',
+      );
+    });
+
+    it('should throw error when amount is zero or negative', async () => {
+      const recipientAddress = getRandomAddress();
+
+      await expect(wallet.sendTokens(0, 'usdc', recipientAddress)).rejects.toThrow(
+        'Amount must be greater than 0',
       );
 
-      expect(offRampResult.offramp_url).toContain('pay.coinbase.com');
-      expect(offRampResult.cashout_total).toBeDefined();
-      expect(offRampResult.sell_amount).toBeDefined();
+      await expect(wallet.sendTokens(-10, 'usdc', recipientAddress)).rejects.toThrow(
+        'Amount must be greater than 0',
+      );
+    });
+  });
+
+  describe('getBalance', () => {
+    it('should fetch balances for ETH and supported tokens', async () => {
+      const wallet = new DefaultSmartWallet(
+        mockOwners,
+        mockSigner,
+        mockChainManager,
+        mockProtocol,
+        mockCoinbaseCDP,
+      );
+
+      const mockPublicClient = mockChainManager.getPublicClient(8453);
+      vi.mocked(mockPublicClient.getBalance as ReturnType<typeof vi.fn>).mockResolvedValue(
+        BigInt('1000000000000000000'),
+      ); // 1 ETH
+      vi.mocked(mockPublicClient.readContract as ReturnType<typeof vi.fn>).mockResolvedValue(
+        BigInt('1000000'),
+      ); // For ERC20 tokens
+
+      const result = await wallet.getBalance();
+
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBeGreaterThan(0);
     });
   });
 });

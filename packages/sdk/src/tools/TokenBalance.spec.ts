@@ -2,11 +2,11 @@ import type { Address } from 'viem';
 import { base } from 'viem/chains';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ChainManager } from '@mycelium/sdk/tools/ChainManager';
-import type { TokenInfo } from '@mycelium/sdk/utils/tokens';
-import { createMockChainManager } from '@mycelium/sdk/test/mocks/ChainManagerMock';
+import type { ChainManager } from '@mycelium-sdk/core/tools/ChainManager';
+import type { TokenInfo } from '@mycelium-sdk/core/utils/tokens';
+import { createMockChainManager } from '@mycelium-sdk/core/test/mocks/ChainManagerMock';
 
-import { fetchERC20Balance, fetchETHBalance } from '@mycelium/sdk/tools/TokenBalance';
+import { fetchERC20Balance, fetchETHBalance } from '@mycelium-sdk/core/tools/TokenBalance';
 
 describe('TokenBalance', () => {
   let chainManager: ChainManager;

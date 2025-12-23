@@ -13,7 +13,6 @@ import type { EmbeddedWallet } from '@/wallet/base/wallets/EmbeddedWallet';
 import type { SmartWallet } from '@/wallet/base/wallets/SmartWallet';
 import type { EmbeddedWalletProvider } from '@/wallet/base/providers/EmbeddedWalletProvider';
 import type { SmartWalletProvider } from '@/wallet/base/providers/SmartWalletProvider';
-import { logger } from '@/tools/Logger';
 
 /**
  * Unified Wallet Provider class
@@ -230,8 +229,7 @@ export class WalletProvider {
         throw new Error(
           'Either walletAddress or deploymentOwners array must be provided to locate the smart wallet',
         );
-      } catch (error) {
-        logger.error('Error getting smart wallet', error, 'WalletProvider');
+      } catch {
         throw new Error(
           'Either walletAddress or deploymentOwners array must be provided to locate the smart wallet',
         );

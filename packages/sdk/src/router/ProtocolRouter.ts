@@ -1,8 +1,9 @@
 import type { SupportedChainId } from '@/constants/chains';
 import { availableProtocols } from '@/constants/protocols';
-import { ProtocolRouterBase } from '@/router/base/ProtocolRouterBase';
+import type { BaseProtocol } from '@/protocols/base/BaseProtocol';
+import { ProxyProtocol } from '@/protocols/implementations/ProxyProtocol';
 import type { ChainManager } from '@/tools/ChainManager';
-import type { Protocol, ProtocolsRouterConfig } from '@/types/protocols/general';
+import type { Protocol } from '@/types/protocols/general';
 
 /**
  * Protocol Router
@@ -13,35 +14,31 @@ import type { Protocol, ProtocolsRouterConfig } from '@/types/protocols/general'
  * Selects and recommends protocols for yield strategies based on router configuration,
  * available protocols, and API key for paid protocols
  */
-export class ProtocolRouter extends ProtocolRouterBase {
+export class ProtocolRouter {
+  /** Chain manager instance for network access */
+  private readonly chainManager: ChainManager;
+
+  private readonly isApiKeyValid: boolean;
+
   /**
    * Initialize the protocol router
    * @param config Router configuration including risk level, min APY, and optional API key
    * @param chainManager Chain manager instance for network validation
    */
-  constructor(config: ProtocolsRouterConfig, chainManager: ChainManager) {
-    super(config.riskLevel, chainManager, config.minApy, config.apiKey);
+  constructor(chainManager: ChainManager, isApiKeyValid: boolean) {
+    this.chainManager = chainManager;
+    this.isApiKeyValid = isApiKeyValid;
   }
+
   /**
    * Get all protocols available for the current configuration
    *
    * Includes all non-premium protocols and premium protocols if the API key is valid
    * @returns Array of available protocol definitions
    */
-  getProtocols(): Protocol[] {
-    const isKeyValid = this.apiKeyValidator.validate(this.apiKey);
-
-    // Filter protocols based on two conditions:
-    // 1. Include all non-premium protocols
-    // 2. Include premium protocols only if API key is valid
+  getActivePublicProtocols(): Protocol[] {
     const allAvailableProtocols = availableProtocols.filter((protocol) => {
-      // Always include non-premium protocols
-      if (!protocol.info.isPremium) {
-        return true;
-      }
-
-      // Include premium protocols only if API key is valid
-      return protocol.info.isPremium && isKeyValid;
+      return protocol.info.isActive;
     });
 
     return allAvailableProtocols;
@@ -69,28 +66,26 @@ export class ProtocolRouter extends ProtocolRouterBase {
    * @throws Error if no protocols are available for the current risk level
    * @returns Protocol instance considered the best match
    */
-  recommend(): Protocol {
-    const protocols = this.getProtocols();
+  select(): BaseProtocol {
+    if (this.isApiKeyValid) {
+      return new ProxyProtocol();
+    }
 
-    // TODO: Implement the recommendation logic => fetch pools for each protocol and then check APY for each pool to make sure the protocols is the best suited for the given router config
-    // Filter protocols that match the risk level. Later on add more conditions for the recommendation
+    const protocols = this.getActivePublicProtocols();
+
     const eligibleProtocols = protocols.filter((protocol) => {
-      // Check if protocol matches risk level
-      const riskMatches = protocol.info.riskLevel === this.riskLevel;
-
       const isSupportedChain = this.isProtocolSupportedChain(protocol.info.supportedChains);
 
-      return riskMatches && isSupportedChain;
+      return isSupportedChain;
     });
 
     if (eligibleProtocols.length === 0) {
-      throw new Error(`No protocols available for risk level: ${this.riskLevel}`);
+      throw new Error(`No protocols available`);
     }
 
-    // TODO: Add a smarter sorting of protocols here and then return the best one
-    // For now, we just return the first protocol that matches the risk level
+    // For now, we just return the first protocol from public protocols that matches the risk level
     const bestProtocol = eligibleProtocols[0];
 
-    return bestProtocol!;
+    return bestProtocol!.instance;
   }
 }
