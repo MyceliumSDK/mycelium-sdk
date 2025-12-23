@@ -40,3 +40,6 @@ bun.lock
 
 .turbo
 .vercel
+
+.env
+.npmrc
