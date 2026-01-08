@@ -4,7 +4,11 @@ import type { WebAuthnAccount } from 'viem/account-abstraction';
 
 /**
  * Options for creating a smart wallet
+<<<<<<< HEAD
  * Parameters for creating a new smart wallet with specified owners and signer
+=======
+ *  Parameters for creating a new smart wallet with specified owners and signer
+>>>>>>> main
  */
 export type CreateSmartWalletOptions = {
   owners: Array<Address | WebAuthnAccount>;
@@ -14,7 +18,11 @@ export type CreateSmartWalletOptions = {
 
 /**
  * Options for creating a wallet with embedded signer
+<<<<<<< HEAD
  * Parameters for creating both embedded and smart wallets, with embedded wallet automatically added as signer
+=======
+ *  Parameters for creating both embedded and smart wallets, with embedded wallet automatically added as signer
+>>>>>>> main
  */
 export type CreateAccountOptions = {
   owners?: Array<Address | WebAuthnAccount>;
@@ -24,7 +32,11 @@ export type CreateAccountOptions = {
 
 /**
  * Options for retrieving a smart wallet with provided signer
+<<<<<<< HEAD
  * Parameters for getting an existing smart wallet using a provided LocalAccount signer
+=======
+ *  Parameters for getting an existing smart wallet using a provided LocalAccount signer
+>>>>>>> main
  */
 export type GetSmartWalletOptions = {
   signer: LocalAccount;
@@ -36,7 +48,11 @@ export type GetSmartWalletOptions = {
 
 /**
  * Options for retrieving an embedded wallet
+<<<<<<< HEAD
  * Parameters for getting an existing embedded wallet
+=======
+ *  Parameters for getting an existing embedded wallet
+>>>>>>> main
  */
 export type GetEmbeddedWalletOptions = {
   walletId: string;
@@ -44,7 +60,11 @@ export type GetEmbeddedWalletOptions = {
 
 /**
  * Options for retrieving a smart wallet with embedded wallet signer
+<<<<<<< HEAD
  * Parameters for getting an existing smart wallet using an embedded wallet as signer.
+=======
+ *  Parameters for getting an existing smart wallet using an embedded wallet as signer.
+>>>>>>> main
  * If neither walletAddress nor deploymentOwners is provided, defaults to using the embedded wallet as single owner.
  */
 export type GetAccountOptions = Omit<GetSmartWalletOptions, 'signer'> & GetEmbeddedWalletOptions;
