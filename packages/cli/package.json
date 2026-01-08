@@ -1,0 +1,24 @@
+{
+  "name": "@mycelium-sdk/cli",
+  "version": "1.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "buildSdk": "pnpm run --filter @mycelium-sdk/core build",
+    "start": "pnpm run buildSdk && pnpm exec tsx src/index.ts",
+    "dev": "pnpm exec tsx src/index.ts"
+  },
+  "dependencies": {
+    "@mycelium-sdk/core": "workspace:*",
+    "dotenv": "^16.4.5",
+    "figlet": "^1.9.4",
+    "lowdb": "^7.0.1",
+    "readline": "^1.3.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

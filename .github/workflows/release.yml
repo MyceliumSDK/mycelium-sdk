@@ -1,6 +1,7 @@
 name: Release
 on:
-  push:
+  pull_request:
+    types: [closed]
     branches: [develop, main]
 permissions:
   contents: write
@@ -9,6 +10,9 @@ permissions:
 
 jobs:
   release:
+    if: >
+      github.event.pull_request.merged == true &&
+      !contains(join(github.event.pull_request.labels.*.name, ','), 'no-release')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,12 +27,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Set publish command
-        run: |
-          if [ "${GITHUB_REF}" = "refs/heads/develop" ]; then
-            echo "PUBLISH_CMD=pnpm changeset publish --provenance --tag next" >> $GITHUB_ENV
-          else
-            echo "PUBLISH_CMD=pnpm changeset publish --provenance" >> $GITHUB_ENV
-          fi
+        run: echo "PUBLISH_CMD=pnpm changeset publish --provenance" >> $GITHUB_ENV
 
       - name: Create or Publish Release
         uses: changesets/action@v1

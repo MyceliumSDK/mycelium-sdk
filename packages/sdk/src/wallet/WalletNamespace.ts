@@ -1,31 +1,37 @@
 import type {
+  CreateAccountOptions,
   CreateSmartWalletOptions,
-  CreateWalletWithEmbeddedSignerOptions,
   GetEmbeddedWalletOptions,
   GetSmartWalletOptions,
-  GetSmartWalletWithEmbeddedSignerOptions,
+  GetAccountOptions,
+  CreateAccountResult,
 } from '@/types/wallet';
 import type { EmbeddedWallet } from '@/wallet/base/wallets/EmbeddedWallet';
 import type { SmartWallet } from '@/wallet/base/wallets/SmartWallet';
 import type { WalletProvider } from '@/wallet/WalletProvider';
 
 /**
- * Public wallet namespace that exposes unified wallet operations
+ * Wallet namespace to create and retrieve different wallet formats and overall web3 account
  *
  * @public
- * @category Wallets creation and retrieval
+ * @category 2. Accounts creation and retrieval
  * @remarks
- * This class is returned by {@link MyceliumSDK} and provides a simplified
- * interface for wallet creation and retrieval. Advanced functionality can be accessed through
- * the underlying providers via the getters {@link embeddedWalletProvider} and
- * {@link smartWalletProvider}
+ * This class is returned by {@link MyceliumSDK} and provides a methods to create and retrieve different wallet formats
+ * The common methods are:
+ * - {@link createAccount} which creates a unified account: a smart wallet with an embedded wallet as signer
+ * - {@link getAccount} which retrieves a unified account: a smart wallet using an embedded walletId
+ * More advanced option are also available
  *
- * Typical flows:
- * - Create embedded wallet only: {@link createEmbeddedWallet}
- * - Create smart wallet only (you provide signer/owners): {@link createSmartWallet}
- * - Create smart wallet with embedded as signer: {@link createWalletWithEmbeddedSigner}
- * - Get smart wallet using embedded as signer: {@link getSmartWalletWithEmbeddedSigner}
- * - Get smart wallet using a provided signer: {@link getSmartWallet}
+ * @example
+ * ```ts
+ * // Create a smart wallet and related embedded wallet
+ * const { embeddedWalletId, smartWallet } = await myceliumSDK.wallet.createAccount();
+ *
+ * // Get the smart wallet using the embedded walletId
+ * const smartWallet = await myceliumSDK.wallet.getAccount({
+ *   embeddedWalletId,
+ * });
+ * ```
  */
 export class WalletNamespace {
   /**
@@ -40,34 +46,6 @@ export class WalletNamespace {
    */
   constructor(provider: WalletProvider) {
     this.provider = provider;
-  }
-
-  /**
-   * Direct access to the underlying embedded wallet provider
-   *
-   * @public
-   * @category Providers
-   * @remarks
-   * Useful when you need advanced functionality beyond the unified namespace. By default, you should use the unified namespace
-   *
-   * @returns The configured embedded wallet provider instance
-   */
-  get embeddedWalletProvider() {
-    return this.provider.embeddedWalletProvider;
-  }
-
-  /**
-   * Direct access to the underlying smart wallet provider
-   *
-   * @public
-   * @category Providers
-   * @remarks
-   * Useful when you need advanced functionality beyond the unified namespace. By default, you should use the unified namespace
-   *
-   * @returns The configured smart wallet provider instance
-   */
-  get smartWalletProvider() {
-    return this.provider.smartWalletProvider;
   }
 
   /**
@@ -104,7 +82,7 @@ export class WalletNamespace {
   }
 
   /**
-   * Creates a smart wallet with an embedded wallet as signer
+   * A unified a web3 account: creates a smart wallet with an embedded wallet as signer
    *
    * @public
    * @category Creation
@@ -118,14 +96,12 @@ export class WalletNamespace {
    * @param params.nonce Optional nonce/salt for deterministic address generation (defaults to 0)
    * @returns Promise that resolves to the created {@link SmartWallet}
    */
-  async createWalletWithEmbeddedSigner(
-    params?: CreateWalletWithEmbeddedSignerOptions,
-  ): Promise<SmartWallet> {
-    return this.provider.createWalletWithEmbeddedSigner(params);
+  async createAccount(params?: CreateAccountOptions): Promise<CreateAccountResult> {
+    return this.provider.createAccount(params);
   }
 
   /**
-   * Gets a smart wallet using an embedded wallet as the signer
+   * Gets a unified web3 account: a smart wallet using an embedded wallet as the signer
    *
    * @public
    * @category Retrieval
@@ -143,8 +119,8 @@ export class WalletNamespace {
    * @returns Promise that resolves to the {@link SmartWallet}
    * @throws Error if the embedded wallet cannot be found
    */
-  async getSmartWalletWithEmbeddedSigner(params: GetSmartWalletWithEmbeddedSignerOptions) {
-    return this.provider.getSmartWalletWithEmbeddedSigner(params);
+  async getAccount(params: GetAccountOptions) {
+    return this.provider.getAccount(params);
   }
 
   /**

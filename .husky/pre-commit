@@ -9,3 +9,8 @@ pnpm lint-staged
 echo "✅ Lint staged done"
 echo
 
+
+echo "🧱 Building the project..."
+pnpm build
+echo "✅ Building done"
+echo

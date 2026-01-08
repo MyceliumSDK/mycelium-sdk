@@ -18,15 +18,16 @@ import type { TokenBalance } from '@/types/token';
 import { type AssetIdentifier, parseAssetAmount, resolveAsset } from '@/utils/assets';
 import { SmartWallet } from '@/wallet/base/wallets/SmartWallet';
 import type { TransactionData } from '@/types/transaction';
-import type { VaultBalance, VaultTxnResult, Protocol } from '@/types/protocols/general';
+import type { VaultBalance, VaultInfo, VaultTxnResult } from '@/types/protocols/general';
 import type { CoinbaseCDP } from '@/tools/CoinbaseCDP';
 import type { OffRampUrlResponse, OnRampUrlResponse } from '@/types/ramp';
+import type { BaseProtocol } from '@/protocols/base/BaseProtocol';
 
 /**
  * Default ERC-4337 smart wallet implementation. Implements main methods that a user can use to interact with DeFi protocols and use all related functionalities
  *
  * @public
- * @category Wallets operations
+ * @category 3. Account operations
  * @remarks
  * Backed by Coinbase Smart Account and compatible with ERC-4337 UserOperations
  * Supports multi-owner wallets (EVM addresses or WebAuthn owners), gas-sponsored flows,
@@ -46,7 +47,7 @@ export class DefaultSmartWallet extends SmartWallet {
   /** Nonce (salt) for deterministic address calculation */
   private nonce?: bigint;
   /** Selected protocol provider instance */
-  private protocolProvider: Protocol['instance'];
+  private protocolProvider: BaseProtocol; // Protocol['instance'];
   /** Coinbase CDP instance to interact with Coinbase CDP API */
   private coinbaseCDP: CoinbaseCDP | null;
 
@@ -66,7 +67,7 @@ export class DefaultSmartWallet extends SmartWallet {
     owners: Array<Address | WebAuthnAccount>,
     signer: LocalAccount,
     chainManager: ChainManager,
-    protocolProvider: Protocol['instance'],
+    protocolProvider: BaseProtocol, // Protocol['instance'],
     coinbaseCDP: CoinbaseCDP | null,
     deploymentAddress?: Address,
     signerOwnerIndex?: number,
@@ -186,10 +187,10 @@ export class DefaultSmartWallet extends SmartWallet {
    * @param amount Human-readable amount string
    * @returns Transaction result for the deposit
    */
-  async earn(amount: string): Promise<VaultTxnResult> {
+  async earn(vaultInfo: VaultInfo, amount: string): Promise<VaultTxnResult> {
     this.chainManager.getSupportedChain();
 
-    const depositTransactionResult = this.protocolProvider.deposit(amount, this);
+    const depositTransactionResult = this.protocolProvider.deposit(vaultInfo, amount, this);
 
     return depositTransactionResult;
   }
@@ -202,15 +203,9 @@ export class DefaultSmartWallet extends SmartWallet {
    * @category Earn
    * @returns Vault balance or `null` if nothing deposited
    */
-  async getEarnBalance(): Promise<VaultBalance | null> {
-    const depositedVault = await this.protocolProvider.fetchDepositedVaults(this);
-
-    if (!depositedVault) {
-      return null;
-    }
-
+  async getEarnBalances(): Promise<VaultBalance[]> {
     const userAddress = await this.getAddress();
-    return this.protocolProvider.getBalance(depositedVault, userAddress);
+    return this.protocolProvider.getBalances(userAddress);
   }
 
   /**
@@ -222,8 +217,8 @@ export class DefaultSmartWallet extends SmartWallet {
    * @throws Error if the withdrawal fails
    * @throws Error a user didn't deposit anything
    */
-  async withdraw(amount: string): Promise<VaultTxnResult> {
-    const withdrawTransactionResult = await this.protocolProvider.withdraw(amount, this);
+  async withdraw(vaultInfo: VaultInfo, amount: string): Promise<VaultTxnResult> {
+    const withdrawTransactionResult = await this.protocolProvider.withdraw(vaultInfo, amount, this);
 
     return withdrawTransactionResult;
   }
@@ -269,7 +264,7 @@ export class DefaultSmartWallet extends SmartWallet {
       return hash;
     } catch (error) {
       throw new Error(
-        `Failed to send transaction: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Failed to send transaction: ${error instanceof Error ? error.message.toString().slice(0, 100) : 'Unknown error'}`,
       );
     }
   }
@@ -323,7 +318,7 @@ export class DefaultSmartWallet extends SmartWallet {
    * Funds the smart wallet with the specified amount of the specified token via Coinbase CDP on-ramp service
    *
    * @public
-   * @category Ramp
+   * @category Funding
    *
    * @remarks
    * If Coinbase CDP is not initialized, the method will throw an error. For more details, visit @see {@link https://docs.cdp.coinbase.com/api-reference/v2/rest-api/onramp/create-an-onramp-session}
@@ -372,7 +367,7 @@ export class DefaultSmartWallet extends SmartWallet {
    * Cashout token from smart wallet to fiat currency via Coinbase CDP off-ramp service
    *
    * @public
-   * @category Ramp
+   * @category Funding
    *
    * @remarks
    * If Coinbase CDP is not initialized, the method will throw an error. For more details, visit @see {@link https://docs.cdp.coinbase.com/api-reference/rest-api/onramp-offramp/create-sell-quote}

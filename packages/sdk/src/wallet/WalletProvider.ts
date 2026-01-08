@@ -3,16 +3,16 @@ import type { WebAuthnAccount } from 'viem/account-abstraction';
 
 import type {
   CreateSmartWalletOptions,
-  CreateWalletWithEmbeddedSignerOptions,
+  CreateAccountOptions,
   GetEmbeddedWalletOptions,
   GetSmartWalletOptions,
-  GetSmartWalletWithEmbeddedSignerOptions,
+  GetAccountOptions,
+  CreateAccountResult,
 } from '@/types/wallet';
 import type { EmbeddedWallet } from '@/wallet/base/wallets/EmbeddedWallet';
 import type { SmartWallet } from '@/wallet/base/wallets/SmartWallet';
 import type { EmbeddedWalletProvider } from '@/wallet/base/providers/EmbeddedWalletProvider';
 import type { SmartWalletProvider } from '@/wallet/base/providers/SmartWalletProvider';
-import { logger } from '@/tools/Logger';
 
 /**
  * Unified Wallet Provider class
@@ -111,11 +111,14 @@ export class WalletProvider {
    * @param params.nonce Optional salt/nonce for deterministic address calculation (defaults to 0)
    * @returns Promise that resolves to the created {@link SmartWallet}
    */
-  async createWalletWithEmbeddedSigner(
-    params?: CreateWalletWithEmbeddedSignerOptions,
-  ): Promise<SmartWallet> {
+  async createAccount(params?: CreateAccountOptions): Promise<CreateAccountResult> {
     const { owners: ownersParam, embeddedWalletIndex, nonce } = params || {};
     const embeddedWallet = await this.embeddedWalletProvider.createWallet();
+
+    if (!embeddedWallet.walletId) {
+      throw new Error('Failed to create embedded wallet. No wallet ID returned');
+    }
+
     const account = await embeddedWallet.account();
 
     let owners: Array<Address | WebAuthnAccount>;
@@ -127,15 +130,20 @@ export class WalletProvider {
       owners = [embeddedWallet.address]; // Default to just the embedded wallet
     }
 
-    return this.smartWalletProvider.createWallet({
+    const smartWallet = await this.smartWalletProvider.createWallet({
       owners,
       signer: account,
       nonce,
     });
+
+    return {
+      embeddedWalletId: embeddedWallet.walletId,
+      smartWallet,
+    };
   }
 
   /**
-   * Gets a smart wallet using an embedded wallet as the signer
+   * Gets a unified web3 account: a smart wallet using an embedded wallet as the signer
    *
    * @internal
    * @remarks
@@ -152,7 +160,7 @@ export class WalletProvider {
    * @returns Promise that resolves to the {@link SmartWallet}
    * @throws Error if the embedded wallet cannot be found
    */
-  async getSmartWalletWithEmbeddedSigner(params: GetSmartWalletWithEmbeddedSignerOptions) {
+  async getAccount(params: GetAccountOptions) {
     const { walletId, deploymentOwners, walletAddress } = params;
     const embeddedWallet = await this.embeddedWalletProvider.getWallet({
       walletId,
@@ -221,8 +229,7 @@ export class WalletProvider {
         throw new Error(
           'Either walletAddress or deploymentOwners array must be provided to locate the smart wallet',
         );
-      } catch (error) {
-        logger.error('Error getting smart wallet', error, 'WalletProvider');
+      } catch {
         throw new Error(
           'Either walletAddress or deploymentOwners array must be provided to locate the smart wallet',
         );

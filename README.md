@@ -1,4 +1,17 @@
-# Mycelium SDK
+<div align="center">
+  <h1>MyceliumSDK</h1>
+  <p><strong>The open-source SDK for simple DeFi integration</strong></p>
+  <p>Create your own products without worry about DeFi and Web3 complexity</p>
+</div>
+
+<div align="center">
+  <a href="https://github.com/0xdeval/mycelium-sdk/blob/main/LICENSE"><img src="https://img.shields.io/github/license/0xdeval/mycelium-sdk?style=for-the-badge" alt="License"></a>
+  <a href="https://www.npmjs.com/package/@mycelium-sdk/core"><img src="https://img.shields.io/npm/v/@mycelium-sdk/core?style=for-the-badge" alt="NPM Version"></a>
+  <a href="https://docs.mycelium.sh/"><img src="https://img.shields.io/badge/Documentation-Read%20Docs-blue?style=for-the-badge" alt="Documentation"></a>
+  <a href="https://github.com/0xdeval/mycelium-sdk/actions/workflows/monorepo-ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/0xdeval/mycelium-sdk/monorepo-ci.yml?branch=main&style=for-the-badge" alt="CI Status"></a>
+</div>
+
+# What is MyceliumSDK?
 
 A TypeScript-based monorepo that contains:
 
@@ -60,4 +73,4 @@ Check the [CONTRIBUTION.md](https://github.com/0xdeval/mycelium-sdk/blob/main/CO
 
 ## License
 
-This project is licensed under the dual license - Apache 2.0 + Commercial - see the [LICENSE](https://github.com/0xdeval/mycelium-sdk/blob/main/LICENSE.md)
+This project is licensed under the dual license - Apache 2.0 + Commercial - see the [LICENSE](https://github.com/0xdeval/mycelium-sdk/blob/main/LICENSE)

@@ -11,6 +11,7 @@
   "includeVersion": false,
   "plugin": ["typedoc-github-theme"],
   "gitRevision": "main",
+  "sort": ["alphabetical-ignoring-documents", "source-order"],
   "navigation": {
     "includeGroups": false,
     "includeCategories": true

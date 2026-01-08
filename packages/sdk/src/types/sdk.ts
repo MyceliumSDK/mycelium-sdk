@@ -1,5 +1,5 @@
 import type { ChainConfig } from '@/types/chain';
-import type { ProtocolsRouterConfig } from '@/types/protocols/general';
+import type { ProtocolsSecurityConfig } from '@/types/protocols/general';
 
 /**
  * Mycelium SDK configuration
@@ -64,7 +64,7 @@ export interface MyceliumSDKConfig {
    * @remarks
    * If an integrator is not provided any requirements, `low` risk level protocols will be used by default
    */
-  protocolsRouterConfig?: ProtocolsRouterConfig;
+  protocolsSecurityConfig?: ProtocolsSecurityConfig;
   /**
    * Coinbase CDP configuration
    * @remarks
@@ -74,6 +74,16 @@ export interface MyceliumSDKConfig {
    * Currently used for on/off ramp functionality for a wallet
    */
   coinbaseCDPConfig?: CoinbaseCDPConfig;
+}
+
+/**
+ * Basic Mycelium SDK configuration for a case when a user provided only API key without advanced configurations
+ */
+export interface BasicMyceliumSDKConfig {
+  apiKey: string;
+  chainId?: number;
+  protocolsSecurityConfig: ProtocolsSecurityConfig;
+  overrides?: Partial<MyceliumSDKConfig>;
 }
 
 /**

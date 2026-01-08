@@ -3,13 +3,13 @@ import {
   onRampResponseMock,
   coinbaseCDPErrorMock,
   onRampConfigResponseMock,
-} from '@mycelium/sdk/test/mocks/ramp/on-ramp';
-import type { ChainManager } from '@mycelium/sdk/tools/ChainManager';
-import type { CoinbaseCDP as cdp } from '@mycelium/sdk/tools/CoinbaseCDP';
+} from '@mycelium-sdk/core/test/mocks/ramp/on-ramp';
+import type { ChainManager } from '@mycelium-sdk/core/tools/ChainManager';
+import type { CoinbaseCDP as cdp } from '@mycelium-sdk/core/tools/CoinbaseCDP';
 import {
   offRampConfigResponseMock,
   offRampResponseMock,
-} from '@mycelium/sdk/test/mocks/ramp/off-ramp';
+} from '@mycelium-sdk/core/test/mocks/ramp/off-ramp';
 
 vi.mock('../../utils/urls', () => ({
   checkValidUrl: vi.fn().mockReturnValue(true),
@@ -62,7 +62,7 @@ describe('CoinbaseCDP (implementation)', () => {
     vi.clearAllMocks();
     vi.resetAllMocks();
     vi.resetModules();
-    ({ CoinbaseCDP } = await import('@mycelium/sdk/tools/CoinbaseCDP'));
+    ({ CoinbaseCDP } = await import('@mycelium-sdk/core/tools/CoinbaseCDP'));
     chainManager = makeChainManager(8453);
   });
 

@@ -37,8 +37,8 @@ vi.mock('@/tools/Logger', () => ({
   logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() },
 }));
 
-import { ChainManager } from '@mycelium/sdk/tools/ChainManager';
-import type { ChainConfig } from '@mycelium/sdk/types/chain';
+import { ChainManager } from '@mycelium-sdk/core/tools/ChainManager';
+import type { ChainConfig } from '@mycelium-sdk/core/types/chain';
 import { createPublicClient, http } from 'viem';
 import { createBundlerClient } from 'viem/account-abstraction';
 
