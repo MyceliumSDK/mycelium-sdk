@@ -5,5 +5,5 @@
     "@mycelium-sdk/core": "0.1.0",
     "@mycelium-sdk/cli": "1.0.0"
   },
-  "changesets": ["lemon-points-kick", "silly-owls-thank"]
+  "changesets": ["hostname-fix", "lemon-points-kick", "silly-owls-thank"]
 }

@@ -1,5 +1,12 @@
 # @mycelium-sdk/cli
 
+## 1.0.1-alpha.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @mycelium-sdk/core@1.0.0-alpha.2
+
 ## 1.0.1-alpha.0
 
 ### Patch Changes
