@@ -1,5 +1,11 @@
 # @mycelium-sdk/core
 
+## 1.0.0-alpha.2
+
+### Patch Changes
+
+- 1. Change Mycelium cloud URL hostname to a correct one
+
 ## 1.0.0-alpha.1
 
 ### Major Changes
