@@ -1,9 +1,0 @@
-{
-  "mode": "pre",
-  "tag": "alpha",
-  "initialVersions": {
-    "@mycelium-sdk/core": "0.1.0",
-    "@mycelium-sdk/cli": "1.0.0"
-  },
-  "changesets": ["hostname-fix", "lemon-points-kick", "silly-owls-thank"]
-}
