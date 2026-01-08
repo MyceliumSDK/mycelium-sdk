@@ -43,3 +43,5 @@ bun.lock
 
 .env
 .npmrc
+
+*.log

@@ -22,16 +22,18 @@ The Mycelium CLI is an interactive tool that lets you:
 
 ### Setup
 
-1. Install dependencies:sh
+1. Install dependencies:
    `pnpm install`
 
-2. Create a `.env` file with your configuration:
+2. Create a `.env` file with your configuration. Check all necessary variables for setup on `.env.example`
 
 3. [Optional, if you're using a fork] Make sure you run a blockchain service in `packages/blockchain` to have access to a faucet
 
 4. Run the CLI:
-
-   `pnpm start`
+   - For the local development:
+     `NODE_ENV=dev pnpm start`
+   - For the non-local dev:
+     `pnpm start`
 
 ## Usage
 
