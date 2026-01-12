@@ -1,6 +1,6 @@
 # MyceliumSDK
 
-> Check documentation: https://docs.mycelium.sh
+> To get started, check: https://docs.mycelium.sh
 
 A TypeScript-based SDK that implements wallet management via ERC-4337 smart account and access to crypto yield opportunities though integrated protocols under the hood. The SDK allows integrators to easily onboard users, manage wallets, and interact with DeFi protocols
 
@@ -23,20 +23,22 @@ An integrator can define basic settings for yield opportunities that will be rec
 
 Mycelium SDK is an open-source and publicly available to anyone for the usage. Despite this, there are 2 versions of Mycelium SDK that can be used by an integrator:
 
-1. **Self-hosted**
-   Clone the underlying repository, provide all necessary settings for providers that are used under the hood (Privy, Coinbase, etc). Right after this, you can use an integrated to a self hosted SDK version protocol - Spark. For more protocols, you need to switch to the cloud version
-2. **Cloud**
+1. **Cloud**
    This version covers everything for an integrator. You just use the API key that will be provided to you and that's all. All settings and expenses for 3d party providers Mycelium SDK will take on it. For more information, check the `Cloud version` section
-
-## Self-hosted version
-
-Self hosted version is available out of this repo and can be used by anyone by cloning the repo and settings up all necessary and required SDK parameters. Self hosted version has only one integrated protocol that can be used for yield opportunities recommendations - Spark. To start working with a self hosted SDK version, please refer to the `Get started` section
+2. **Self-hosted**
+   Clone the underlying repository, provide all necessary settings for providers that are used under the hood (Privy, Coinbase, etc). Right after this, you can use an integrated to a self hosted SDK version protocol - Spark. For more protocols, you need to switch to the cloud version
 
 ## Cloud version
 
 Cloud version is a paid (current free) version of the SDK, when everything is handled under the hood for an integrator. The only thing that you need to pass to the SDK during the initialization is an API key. All further 3d party platforms integrations will be handled under the hood by Mycelium. To start working with a self hosted SDK version, please refer to the `Get started` section
 
-# Get started
+### Get started
+
+## Self-hosted version
+
+Self hosted version is available out of this repo and can be used by anyone by cloning the repo and settings up all necessary and required SDK parameters. Self hosted version has only one integrated protocol that can be used for yield opportunities recommendations - Spark. To start working with a self hosted SDK version, please refer to the `Get started` section
+
+### Get started
 
 Both cloud and self hosted version are required the following prerequisites:
 
@@ -48,18 +50,19 @@ Both cloud and self hosted version are required the following prerequisites:
 
 Both self hosted and cloud version are required some variables to be provided during the initialization of an SDK. The list of envs for cloud version is significant, than for a self hosted one. Here is the full list of variables:
 
-| Variable Name                 | Description                                                                                        | Version             | Mandatory |
-| ----------------------------- | -------------------------------------------------------------------------------------------------- | ------------------- | --------- |
-| `PRIVY_APP_ID`                | Privy wallet app id for embedded wallets                                                           | Self-hosted         | Yes       |
-| `PRIVY_APP_SECRET`            | Privy wallet app secret for embedded wallets                                                       | Self-hosted         | Yes       |
-| `RPC_URL`                     | A RPC URL for a chain                                                                              | Self-hosted         | Yes       |
-| `BUNDLER_URL`                 | A bundler URL to process User Operations                                                           | Self-hosted         | Yes       |
-| `COINBASE_CDP_API_KEY_ID`     | Coinbase CDP Api Key ID for on/off ramp functionality                                              | Self-hosted         | No        |
-| `COINBASE_CDP_API_KEY_SECRET` | Coinbase CDP Api secret for on/off ramp functionality                                              | Self-hosted         | No        |
-| `INTEGRATOR_ID`               | Unique integrator ID to track SDK usage and enable 3rd party services (e.g., Coinbase off/on-ramp) | Self-hosted         | Yes       |
-| `API_KEY`                     | API key to run SDK with managed settings                                                           | Cloud               | Yes       |
-| `PROTOCOL_RISK_LEVEL`         | Risk level of protocol that will be used by an SDK in the configuration                            | Cloud & self-hosted | Yes       |
-| `CHAIN_ID`                    | Chain ID to work with                                                                              | Cloud & self-hosted | Yes       |
+| Variable Name                 | Description                                                                                           | Version             | Mandatory |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------- | --------- |
+| `PRIVY_APP_ID`                | Privy wallet app id for embedded wallets                                                              | Self-hosted         | Yes       |
+| `PRIVY_APP_SECRET`            | Privy wallet app secret for embedded wallets                                                          | Self-hosted         | Yes       |
+| `RPC_URL`                     | A RPC URL for a chain                                                                                 | Self-hosted         | Yes       |
+| `BUNDLER_URL`                 | A bundler URL to process User Operations                                                              | Self-hosted         | Yes       |
+| `COINBASE_CDP_API_KEY_ID`     | Coinbase CDP Api Key ID for on/off ramp functionality                                                 | Self-hosted         | No        |
+| `COINBASE_CDP_API_KEY_SECRET` | Coinbase CDP Api secret for on/off ramp functionality                                                 | Self-hosted         | No        |
+| `INTEGRATOR_ID`               | Unique integrator ID to track SDK usage and enable 3rd party services (e.g., Coinbase off/on-ramp)    | Self-hosted         | Yes       |
+| `API_KEY`                     | API key to run SDK with managed settings                                                              | Cloud               | Yes       |
+| `PROTOCOL_RISK_LEVEL`         | Risk level of protocol that will be used by an SDK in the configuration                               | Cloud & self-hosted | Yes       |
+| `CHAIN_ID`                    | Chain ID to work with                                                                                 | Cloud & self-hosted | Yes       |
+| `PAYMASTER_URL`               | Pimlico paymaster URL for a provided chain in CHAIN_ID. Currently only Pimlico paymaster is available | Self-hosted         | Yes       |
 
 ## Self hosted
 
@@ -107,7 +110,7 @@ pnpm run start
 
 ### SDK initialization
 
-In case of a self hosted version, you need to define all your env variables. For more details, please refer the `Environment variables` section above. Right after you define all env variables, you can initiate the SDK:
+In case of a self-hosted version, you need to define all your env variables. For more details, please refer the `Environment variables` section above. Right after you define all env variables, you can initiate the SDK:
 
 ```typescript
 this.sdk = new MyceliumSDK({
@@ -131,6 +134,7 @@ this.sdk = new MyceliumSDK({
     chainId: '...',
     rpcUrl: '...',
     bundlerUrl: '...',
+    paymasterUrl: '...',
   },
   protocolsRouterConfig: {
     riskLevel: '...',

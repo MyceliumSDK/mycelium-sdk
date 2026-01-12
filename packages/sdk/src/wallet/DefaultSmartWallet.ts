@@ -6,7 +6,6 @@ import {
   erc20Abi,
   pad,
 } from 'viem';
-import { type WebAuthnAccount, toCoinbaseSmartAccount } from 'viem/account-abstraction';
 
 import { smartWalletFactoryAbi } from '@/abis/smartWalletFactory';
 import { smartWalletFactoryAddress } from '@/constants/addresses';
@@ -22,6 +21,8 @@ import type { VaultBalance, VaultInfo, VaultTxnResult } from '@/types/protocols/
 import type { CoinbaseCDP } from '@/tools/CoinbaseCDP';
 import type { OffRampUrlResponse, OnRampUrlResponse } from '@/types/ramp';
 import type { BaseProtocol } from '@/protocols/base/BaseProtocol';
+import { toCoinbaseSmartAccount, type WebAuthnAccount } from 'viem/account-abstraction';
+import { Paymaster } from '@/tools/Paymaster';
 
 /**
  * Default ERC-4337 smart wallet implementation. Implements main methods that a user can use to interact with DeFi protocols and use all related functionalities
@@ -50,6 +51,8 @@ export class DefaultSmartWallet extends SmartWallet {
   private protocolProvider: BaseProtocol; // Protocol['instance'];
   /** Coinbase CDP instance to interact with Coinbase CDP API */
   private coinbaseCDP: CoinbaseCDP | null;
+  /** Paymaster instance for gas sponsoring */
+  private paymaster: Paymaster;
 
   /**
    * Creates a smart wallet instance
@@ -67,7 +70,7 @@ export class DefaultSmartWallet extends SmartWallet {
     owners: Array<Address | WebAuthnAccount>,
     signer: LocalAccount,
     chainManager: ChainManager,
-    protocolProvider: BaseProtocol, // Protocol['instance'],
+    protocolProvider: BaseProtocol,
     coinbaseCDP: CoinbaseCDP | null,
     deploymentAddress?: Address,
     signerOwnerIndex?: number,
@@ -82,6 +85,7 @@ export class DefaultSmartWallet extends SmartWallet {
     this.nonce = nonce;
     this.protocolProvider = protocolProvider;
     this.coinbaseCDP = coinbaseCDP;
+    this.paymaster = new Paymaster(this.chainManager);
   }
 
   /**
@@ -138,6 +142,8 @@ export class DefaultSmartWallet extends SmartWallet {
     });
     return smartWalletAddress;
   }
+
+  private bumpGasLimits = (x: bigint, pct = 40n) => x + (x * pct) / 100n;
 
   /**
    * Builds a Coinbase Smart Account for a specific chain
@@ -232,16 +238,34 @@ export class DefaultSmartWallet extends SmartWallet {
    *
    * @param transactionData Transaction details (`to`, `value`, `data`)
    * @param chainId Target chain ID
+   * @param options Optional parameters
+   * @param options.paymasterToken ERC-20 token address to use for gas payment (e.g., USDC)
    * @returns Promise that resolves to the UserOperation hash
    * @throws Error with a readable message if submission or inclusion fails
    */
-  async send(transactionData: TransactionData, chainId: SupportedChainId): Promise<Hash> {
+  async send(
+    transactionData: TransactionData,
+    chainId: SupportedChainId,
+    options?: {
+      paymasterToken?: Address | `0x${string}`;
+    },
+  ): Promise<Hash> {
     try {
       const account = await this.getCoinbaseSmartAccount(chainId);
-      const bundlerClient = this.chainManager.getBundlerClient(chainId, account);
 
-      // Extra buffer for gas limits
-      const bump = (x: bigint, pct = 40n) => x + (x * pct) / 100n;
+      // If the paymasterToken is provided, use the ERC-20 paymaster
+      if (options?.paymasterToken) {
+        const walletAddress = await this.getAddress();
+        return this.paymaster.sendWithERC20Paymaster(
+          transactionData,
+          account,
+          walletAddress,
+          chainId,
+          options.paymasterToken,
+        );
+      }
+
+      const bundlerClient = this.chainManager.getBundlerClient(chainId, account);
 
       const gas = await bundlerClient.estimateUserOperationGas({
         account,
@@ -251,12 +275,11 @@ export class DefaultSmartWallet extends SmartWallet {
       const hash = await bundlerClient.sendUserOperation({
         account,
         calls: [transactionData],
-        callGasLimit: bump(gas.callGasLimit),
-        verificationGasLimit: bump(gas.verificationGasLimit),
-        preVerificationGas: bump(gas.preVerificationGas),
+        callGasLimit: this.bumpGasLimits(gas.callGasLimit),
+        verificationGasLimit: this.bumpGasLimits(gas.verificationGasLimit),
+        preVerificationGas: this.bumpGasLimits(gas.preVerificationGas),
       });
 
-      // Wait for the transaction to be included in a block
       await bundlerClient.waitForUserOperationReceipt({
         hash,
       });
@@ -277,29 +300,44 @@ export class DefaultSmartWallet extends SmartWallet {
    *
    * @param transactionData An array of calls to execute
    * @param chainId Target chain ID
+   * @param options Optional parameters
+   * @param options.paymasterToken ERC-20 token address to use for gas payment (e.g., USDC)
    * @returns Promise that resolves to the UserOperation hash for the batch
    * @throws Error with a readable message if submission or inclusion fails
    */
-  async sendBatch(transactionData: TransactionData[], chainId: SupportedChainId): Promise<Hash> {
+  async sendBatch(
+    transactionData: TransactionData[],
+    chainId: SupportedChainId,
+    options?: { paymasterToken?: Address | `0x${string}` },
+  ): Promise<Hash> {
     try {
       const account = await this.getCoinbaseSmartAccount(chainId);
-      const bundlerClient = this.chainManager.getBundlerClient(chainId, account);
 
-      // Extra buffer for gas limits
-      const bump = (x: bigint, pct = 40n) => x + (x * pct) / 100n;
+      // If the paymasterToken is provided, use the ERC-20 paymaster
+      if (options?.paymasterToken) {
+        const walletAddress = await this.getAddress();
+        return this.paymaster.sendWithERC20Paymaster(
+          transactionData,
+          account,
+          walletAddress,
+          chainId,
+          options.paymasterToken,
+        );
+      }
+
+      const bundlerClient = this.chainManager.getBundlerClient(chainId, account);
 
       const gas = await bundlerClient.estimateUserOperationGas({
         account,
         calls: transactionData,
       });
 
-      // Wait for the transaction to be included in a block
       const hash = await bundlerClient.sendUserOperation({
         account,
         calls: transactionData,
-        callGasLimit: bump(gas.callGasLimit),
-        verificationGasLimit: bump(gas.verificationGasLimit),
-        preVerificationGas: bump(gas.preVerificationGas),
+        callGasLimit: this.bumpGasLimits(gas.callGasLimit),
+        verificationGasLimit: this.bumpGasLimits(gas.verificationGasLimit),
+        preVerificationGas: this.bumpGasLimits(gas.preVerificationGas),
       });
 
       await bundlerClient.waitForUserOperationReceipt({

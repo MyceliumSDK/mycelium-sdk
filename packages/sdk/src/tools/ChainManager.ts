@@ -1,9 +1,12 @@
 import { type Chain, createPublicClient, http, type PublicClient } from 'viem';
 import {
   type BundlerClient,
+  type EntryPointVersion,
   type SmartAccount,
   createBundlerClient,
+  entryPoint07Address,
 } from 'viem/account-abstraction';
+import { createPimlicoClient, type PimlicoClient } from 'permissionless/clients/pimlico';
 
 import { type SUPPORTED_CHAIN_IDS, CHAINS_MAP } from '@/constants/chains';
 import type { ChainConfig } from '@/types/chain';
@@ -187,5 +190,35 @@ export class ChainManager {
     });
 
     return client;
+  }
+
+  private getPaymasterUrl(chainId: (typeof SUPPORTED_CHAIN_IDS)[number]): string {
+    const chainConfig = this.chainConfigs;
+    if (!chainConfig) {
+      throw new Error(`No chain config found for chain ID: ${chainId}`);
+    }
+
+    if (chainConfig.paymasterUrl && !this.isValidUrl(chainConfig.paymasterUrl)) {
+      throw new Error(`Invalid paymaster URL for chain ID: ${chainId}`);
+    }
+    return chainConfig.paymasterUrl || '';
+  }
+
+  getPaymasterClient(chainId: (typeof SUPPORTED_CHAIN_IDS)[number]): PimlicoClient | undefined {
+    const paymasterUrl = this.getPaymasterUrl(chainId);
+    if (!paymasterUrl) {
+      throw new Error(`No paymaster URL configured for chain ID: ${chainId}`);
+    }
+
+    const chain = this.getChain(chainId);
+
+    return createPimlicoClient({
+      chain,
+      transport: http(paymasterUrl),
+      entryPoint: {
+        address: entryPoint07Address,
+        version: '0.7' as EntryPointVersion,
+      },
+    });
   }
 }

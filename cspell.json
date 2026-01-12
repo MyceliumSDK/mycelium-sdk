@@ -52,7 +52,8 @@
     "cashout",
     "offramp",
     "labelcheck",
-    "Krupin"
+    "Krupin",
+    "permissionless"
   ],
   "enableFiletypes": ["!binary"],
   "overrides": [

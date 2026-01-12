@@ -28,6 +28,7 @@ import type { ProtocolsSecurityConfig } from '@/types/protocols/general';
  *     chainId: parseInt(process.env.NEXT_PUBLIC_CHAIN_ID!),
  *     rpcUrl: process.env.NEXT_PUBLIC_RPC_URL!,
  *     bundlerUrl: process.env.NEXT_PUBLIC_BUNDLER_URL!,
+ *     paymasterUrl: process.env.NEXT_PUBLIC_PAYMASTER_URL!,
  *   },
  *   protocolsRouterConfig: {
  *     riskLevel: 'low',

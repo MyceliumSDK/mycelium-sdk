@@ -26,6 +26,7 @@ export type OperationType =
 
 export interface OnchainConfig {
   bundlerUrl: string;
+  paymasterUrl?: string;
   coinbaseCdpApiKey: string;
   coinbaseCdpApiKeySecret: string;
   privyAppId: string;

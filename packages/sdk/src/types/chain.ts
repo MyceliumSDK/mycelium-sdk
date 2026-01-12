@@ -11,4 +11,6 @@ export interface ChainConfig {
   rpcUrl: string;
   /** Bundler URL for the chain */
   bundlerUrl: string;
+  /** Paymaster URL for the chain */
+  paymasterUrl?: string;
 }

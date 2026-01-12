@@ -47,6 +47,7 @@
     "axios": "^1.12.2",
     "dotenv": "^17.2.1",
     "eslint": "^9.34.0",
+    "permissionless": "^0.3.2",
     "prettier": "^3.6.2",
     "tsup": "^8.5.0",
     "viem": "^2.37.1",
