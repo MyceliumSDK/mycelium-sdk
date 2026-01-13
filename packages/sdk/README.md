@@ -42,7 +42,7 @@ SDK has the following core features:
 
 An integrator can define basic settings for yield opportunities that will be recommended to a end user through SDK. More about this you can find on the `Protocol security config` section
 
-# versions
+# Versions
 
 Mycelium SDK is an open-source and publicly available to anyone for the usage. Despite this, there are 2 versions of Mycelium SDK that can be used by an integrator:
 
