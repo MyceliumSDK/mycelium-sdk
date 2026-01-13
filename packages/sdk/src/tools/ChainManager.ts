@@ -204,7 +204,7 @@ export class ChainManager {
     return chainConfig.paymasterUrl || '';
   }
 
-  getPaymasterClient(chainId: (typeof SUPPORTED_CHAIN_IDS)[number]): PimlicoClient | undefined {
+  getPaymasterClient(chainId: (typeof SUPPORTED_CHAIN_IDS)[number]): PimlicoClient {
     const paymasterUrl = this.getPaymasterUrl(chainId);
     if (!paymasterUrl) {
       throw new Error(`No paymaster URL configured for chain ID: ${chainId}`);

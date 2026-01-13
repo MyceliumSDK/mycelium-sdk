@@ -308,7 +308,7 @@ export class DefaultSmartWallet extends SmartWallet {
   async sendBatch(
     transactionData: TransactionData[],
     chainId: SupportedChainId,
-    options?: { paymasterToken?: Address | `0x${string}` },
+    options?: { paymasterToken?: Address },
   ): Promise<Hash> {
     try {
       const account = await this.getCoinbaseSmartAccount(chainId);

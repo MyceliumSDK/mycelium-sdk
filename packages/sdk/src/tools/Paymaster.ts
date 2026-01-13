@@ -1,4 +1,4 @@
-import { type Address, encodeFunctionData, erc20Abi, http, type Hex } from 'viem';
+import { type Address, encodeFunctionData, erc20Abi, http, type Hex, maxUint256 } from 'viem';
 import { type ToCoinbaseSmartAccountReturnType } from 'viem/account-abstraction';
 import { createSmartAccountClient, type SmartAccountClient } from 'permissionless';
 import type { PimlicoClient } from 'permissionless/clients/pimlico';
@@ -61,7 +61,6 @@ export class Paymaster {
       return null;
     }
 
-    const { maxUint256 } = await import('viem');
     return {
       to: paymasterToken,
       value: 0n,
