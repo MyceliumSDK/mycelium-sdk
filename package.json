@@ -11,8 +11,7 @@
     "lint": "eslint .",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
-    "spell": "cspell --no-progress --no-summary '**/*'",
-    "deploy": "vercel deploy"
+    "spell": "cspell --no-progress --no-summary '**/*'"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.7",

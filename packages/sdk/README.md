@@ -4,6 +4,29 @@
 
 A TypeScript-based SDK that implements wallet management via ERC-4337 smart account and access to crypto yield opportunities though integrated protocols under the hood. The SDK allows integrators to easily onboard users, manage wallets, and interact with DeFi protocols
 
+# Table of Contents
+
+- [Core features](#core-features)
+- [Versions](#versions)
+  - [Cloud version](#cloud-version)
+    - [Installation](#installation)
+    - [Testing](#testing)
+    - [SDK initialization](#sdk-initialization)
+  - [Self-hosted version](#self-hosted-version)
+    - [Get started](#get-started)
+    - [Environment variables](#environment-variables)
+    - [Installation](#installation-1)
+    - [Testing](#testing-1)
+    - [SDK initialization](#sdk-initialization-1)
+- [Protocol security config](#protocol-security-config)
+- [Integrated protocols](#integrated-protocols)
+- [Chain management](#chain-management)
+- [Local development](#local-development)
+  - [Get started](#get-started)
+  - [Documentation](#documentation)
+  - [Contribution](#contribution)
+- [License](#license)
+
 # Core features
 
 The Mycelium SDK simplifies on-chain interactions by creating and managing a smart wallet with an embedded wallet as a signer for blockchain related operations. Smart wallet as well as embedded wallet signer are non-custodial and only a user has a direct access to it. The embedded wallet management is delegated to [the Privy platform](https://www.privy.io/)
@@ -19,7 +42,7 @@ SDK has the following core features:
 
 An integrator can define basic settings for yield opportunities that will be recommended to a end user through SDK. More about this you can find on the `Protocol security config` section
 
-# Versions
+# versions
 
 Mycelium SDK is an open-source and publicly available to anyone for the usage. Despite this, there are 2 versions of Mycelium SDK that can be used by an integrator:
 
@@ -32,7 +55,69 @@ Mycelium SDK is an open-source and publicly available to anyone for the usage. D
 
 Cloud version is a paid (current free) version of the SDK, when everything is handled under the hood for an integrator. The only thing that you need to pass to the SDK during the initialization is an API key. All further 3d party platforms integrations will be handled under the hood by Mycelium. To start working with a self hosted SDK version, please refer to the `Get started` section
 
-### Get started
+<div align="center">
+  <a href="https://airtable.com/appdAzctTXEwlEoYw/pagJESMXBAT2GTTRA/form" target="_blank">
+    <img src="https://img.shields.io/badge/Get_API_Key-6366F1?style=for-the-badge&logo=key&logoColor=white&labelColor=4F46E5" alt="Get API Key" />
+  </a>
+</div>
+
+### Installation
+
+Right after you would get an API key, you can start working with an SDK
+
+1. Install the library:
+
+```bash
+pnpm install @mycelium-sdk/core
+```
+
+2. You're ready to use and SDK!
+
+### Testing
+
+To test the SDK you can use the build in CLI from the repository OR use SDK on your own project:
+
+1. Clone the repo:
+
+```bash
+git clone https://github.com/MyceliumSDK/mycelium-sdk.git
+```
+
+2. Go to `packages/cli` and install dependencies
+
+```bash
+cd packages/cli && pnpm install
+```
+
+3. Setup the CLI settings based on the [README.md](https://github.com/MyceliumSDK/mycelium-sdk/blob/main/packages/cli/README.md) file
+
+4. Install the latest SDK version:
+
+```bash
+pnpm install @mycelium-sdk/core
+```
+
+5. Start the CLI
+
+```bash
+pnpm run start
+```
+
+> In case if you want to test the SDK with a fork, you need to use `anvil` and `packages/blockchain` service. Please refer to `packages/blockchain/README.md` for more details
+
+### SDK initialization
+
+```javascript
+this.sdk = await MyceliumSDK.init({
+  apiKey,
+  chainId: '8453',
+  protocolsSecurityConfig: {
+    riskLevel: 'low',
+  },
+});
+```
+
+> To get more information about `protocolSecurityConfig` settings, please refer to the `Protocol security config` section below
 
 ## Self-hosted version
 
@@ -46,7 +131,7 @@ Both cloud and self hosted version are required the following prerequisites:
 2. node >= 22.11.0
 3. TypeScript >= 5.0.0
 
-## Environment variables
+### Environment variables
 
 Both self hosted and cloud version are required some variables to be provided during the initialization of an SDK. The list of envs for cloud version is significant, than for a self hosted one. Here is the full list of variables:
 
@@ -63,8 +148,6 @@ Both self hosted and cloud version are required some variables to be provided du
 | `PROTOCOL_RISK_LEVEL`         | Risk level of protocol that will be used by an SDK in the configuration                               | Cloud & self-hosted | Yes       |
 | `CHAIN_ID`                    | Chain ID to work with                                                                                 | Cloud & self-hosted | Yes       |
 | `PAYMASTER_URL`               | Pimlico paymaster URL for a provided chain in CHAIN_ID. Currently only Pimlico paymaster is available | Self-hosted         | Yes       |
-
-## Self hosted
 
 ### Installation
 
@@ -147,68 +230,6 @@ this.sdk = new MyceliumSDK({
 });
 ```
 
-## Cloud version
-
-If you decided to use a ready to use library, you need to receive an API key first. For this purpose, you can contact [Mike Krupin on Telegram](https://t.me/maikyman) or you can [send an email](emailto:myceliumsdk@gmail.com) to the Mycelium mailbox
-
-Right after you would get an API key, you can start working with an SDK
-
-### Installation
-
-1. Install the library:
-
-```bash
-pnpm install @mycelium-sdk/core
-```
-
-2. You're ready to use and SDK!
-
-### Testing
-
-To test the SDK you can use the build in CLI from the repository:
-
-1. Clone the repo:
-
-```bash
-git clone https://github.com/MyceliumSDK/mycelium-sdk.git
-```
-
-2. Go to `packages/cli` and install dependencies
-
-```bash
-cd packages/cli && pnpm install
-```
-
-3. Setup the CLI settings based on the [README.md](https://github.com/MyceliumSDK/mycelium-sdk/blob/main/packages/cli/README.md) file
-
-4. Instal the latest SDK version:
-
-```bash
-pnpm install @mycelium-sdk/core
-```
-
-5. Start the CLI
-
-```bash
-pnpm run start
-```
-
-> In case if you want to test the SDK with a fork, you need to use `anvil` and `packages/blockchain` service. Please refer to `packages/blockchain/README.md` for more details
-
-### SDK initialization
-
-```javascript
-this.sdk = await MyceliumSDK.init({
-  apiKey,
-  chainId: '8453',
-  protocolsSecurityConfig: {
-    riskLevel: 'low',
-  },
-});
-```
-
-> To get more information about `protocolSecurityConfig` settings, please refer to the `Protocol security config` section below
-
 # Protocol security config
 
 Current config of settings used by `Protocol router` to define:
@@ -241,7 +262,9 @@ More protocol and chains will be added soon
 The chain configuration provided during SDK initialization defines where on-chain activities will take place. Currently, only one chain is supported for the `earn` functionality, with multi-chain support coming soon
 The example configuration above uses Base chain (chain ID: 8453), meaning all protocol operations and vault deposits will occur on the Base network
 
-# Local development
+## Local development
+
+### Get started
 
 Install dependencies:
 
@@ -267,9 +290,9 @@ Run tests in watch mode:
 pnpm run test:watch
 ```
 
-# Documentation
+### Documentation
 
-The SDK should be documented and described with [TypeDoc rules](https://typedoc.org/). To get more context, check [CONTRIBUTION.md](https://github.com/0xdeval/mycelium-sdk/blob/main/CONTRIBUTION.md)
+The SDK should be documented and described with [TypeDoc rules](https://typedoc.org/). To get more context, check [CONTRIBUTION.md](https://github.com/MyceliumSDK/mycelium-sdk/blob/main/CONTRIBUTION.md)
 
 To generate documentation:
 
@@ -283,8 +306,8 @@ pnpm run docs:dev
 
 # Contribution
 
-Check the [CONTRIBUTION.md](https://github.com/0xdeval/mycelium-sdk/blob/main/CONTRIBUTION.md)
+Check the [CONTRIBUTION.md](https://github.com/MyceliumSDK/mycelium-sdk/blob/main/CONTRIBUTION.md)
 
 # License
 
-This project is licensed under the dual license - Apache 2.0 + Commercial - see the [LICENSE](https://github.com/0xdeval/mycelium-sdk/blob/main/LICENSE)
+This project is licensed under the dual license - Apache 2.0 + Commercial - see the [LICENSE](https://github.com/MyceliumSDK/mycelium-sdk/blob/main/LICENSE)

@@ -24,10 +24,7 @@
     "build": "tsup src/index.ts --format esm,cjs --dts --sourcemap --clean --tsconfig tsconfig.build.json",
     "watch": "tsup src/index.ts --format esm,cjs --dts --sourcemap --watch --tsconfig tsconfig.build.json",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "docs:public": "typedoc --options typedoc.public.json",
-    "docs:dev": "typedoc --options typedoc.dev.json",
-    "docs": "pnpm docs:public && pnpm docs:dev"
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@types/bun": "latest",

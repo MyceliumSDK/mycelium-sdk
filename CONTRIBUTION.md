@@ -413,7 +413,7 @@ By contributing to Mycelium SDK, you agree that your contributions will be licen
 - **Apache License 2.0 (Non-Commercial)** for non-commercial use
 - **Commercial License** for commercial use
 
-See [LICENSE](https://github.com/0xdeval/mycelium-sdk/blob/main/LICENSE) for full details
+See [LICENSE](https://github.com/MyceliumSDK/mycelium-sdk/blob/main/LICENSE) for full details
 
 ## Getting help
 
