@@ -53,8 +53,8 @@ For local development, please take a look at separate projects README.md files:
 
 ## Contributing
 
-Check the [CONTRIBUTION.md](https://github.com/0xdeval/mycelium-sdk/blob/main/CONTRIBUTION.md)
+Check the [CONTRIBUTION.md](https://github.com/MyceliumSDK/mycelium-sdk/blob/main/CONTRIBUTION.md)
 
 ## License
 
-This project is licensed under the dual license - Apache 2.0 + Commercial - see the [LICENSE](https://github.com/0xdeval/mycelium-sdk/blob/main/LICENSE)
+This project is licensed under the dual license - Apache 2.0 + Commercial - see the [LICENSE](https://github.com/MyceliumSDK/mycelium-sdk/blob/main/LICENSE)
