@@ -91,7 +91,7 @@ cd packages/cli && pnpm install
 
 3. Setup the CLI settings based on the [README.md](https://github.com/MyceliumSDK/mycelium-sdk/blob/main/packages/cli/README.md) file
 
-4. Instal the latest SDK version:
+4. Install the latest SDK version:
 
 ```bash
 pnpm install @mycelium-sdk/core
