@@ -192,7 +192,7 @@ export class ChainManager {
     return client;
   }
 
-  private getPaymasterUrl(chainId: (typeof SUPPORTED_CHAIN_IDS)[number]): string {
+  private getPaymasterUrl(chainId: (typeof SUPPORTED_CHAIN_IDS)[number]): string | undefined {
     const chainConfig = this.chainConfigs;
     if (!chainConfig) {
       throw new Error(`No chain config found for chain ID: ${chainId}`);
@@ -201,13 +201,13 @@ export class ChainManager {
     if (chainConfig.paymasterUrl && !this.isValidUrl(chainConfig.paymasterUrl)) {
       throw new Error(`Invalid paymaster URL for chain ID: ${chainId}`);
     }
-    return chainConfig.paymasterUrl || '';
+    return chainConfig.paymasterUrl;
   }
 
   getPaymasterClient(chainId: (typeof SUPPORTED_CHAIN_IDS)[number]): PimlicoClient | undefined {
     const paymasterUrl = this.getPaymasterUrl(chainId);
     if (!paymasterUrl) {
-      throw new Error(`No paymaster URL configured for chain ID: ${chainId}`);
+      return undefined;
     }
 
     const chain = this.getChain(chainId);
