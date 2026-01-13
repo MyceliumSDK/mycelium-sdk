@@ -247,7 +247,7 @@ export class DefaultSmartWallet extends SmartWallet {
     transactionData: TransactionData,
     chainId: SupportedChainId,
     options?: {
-      paymasterToken?: Address | `0x${string}`;
+      paymasterToken?: Address;
     },
   ): Promise<Hash> {
     try {
