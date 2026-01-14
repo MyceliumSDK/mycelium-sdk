@@ -32,17 +32,4 @@ export const isValidAmountFormat = (amount: string): boolean => {
   return numberPattern.test(trimmed);
 };
 
-const BASE_MAINNET_CHAIN_ID = '8453';
-const BASE_MAINNET_USDC_TOKEN_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
-
-const configuredChainId = process.env.CHAIN_ID;
-
-if (configuredChainId && configuredChainId !== BASE_MAINNET_CHAIN_ID) {
-  throw new Error(
-    `USDC_TOKEN_ADDRESS is only configured for Base mainnet (chain ID ${BASE_MAINNET_CHAIN_ID}), ` +
-      `but CHAIN_ID is set to "${configuredChainId}". ` +
-      'Either set CHAIN_ID=8453 for Base mainnet or avoid using paymaster functionality on this chain.',
-  );
-}
-
-export const USDC_TOKEN_ADDRESS = BASE_MAINNET_USDC_TOKEN_ADDRESS;
+export const USDC_TOKEN_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
