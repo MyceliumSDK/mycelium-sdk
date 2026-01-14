@@ -1,5 +1,39 @@
 # @mycelium-sdk/core
 
+## 2.0.0-alpha.0
+
+### Major Changes
+
+- 39daed2: ## What was changed?
+  - Removed redundant links from SDK README, LICENSE, and CONTRIBUTION
+  - Changed SDK README description
+
+  ## Why was changed/added?
+
+  To keep everything up-dated
+
+  ## How to use the change?
+
+  No necessary actions are required
+
+- 2030d68: ## What was changed?
+  - Supported Pimlico paymaster in SDK for support gas using ERC-20 tokens
+  - Supported paymaster for send and sendBatch SDK methods
+
+  ## Why was changed/added?
+  - Support smoother user experience with smart wallet
+
+  ## How to use the change?
+
+  For self-hosted version:
+  - Use `PAYMASTER_URL` env variable to pass the paymaster URL to SDK on the init step
+  - Currently only the Pimlico paymaster is supported
+  - Currently only gas sponsoring with ERC-20 tokens is supported
+
+  More details:
+  - README.md
+  - https://docs.blockscout.com
+
 ## 1.0.0
 
 ### Major Changes

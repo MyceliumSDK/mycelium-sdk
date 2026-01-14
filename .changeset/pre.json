@@ -1,0 +1,10 @@
+{
+  "mode": "pre",
+  "tag": "alpha",
+  "initialVersions": {
+    "blockchain": "0.0.0",
+    "@mycelium-sdk/cli": "1.0.1",
+    "@mycelium-sdk/core": "1.0.0"
+  },
+  "changesets": ["early-parks-walk", "five-pugs-make"]
+}
