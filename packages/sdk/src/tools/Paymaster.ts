@@ -27,7 +27,12 @@ export class Paymaster {
 
   /**
    * Gets paymaster client for the specified chain
-   * @private
+   *
+   * @internal
+   * @category Paymaster
+   * @param chainId Target chain ID
+   * @returns PimlicoClient instance
+   * @throws Error if no paymaster URL is configured
    */
   private getPaymasterClient(chainId: SupportedChainId): PimlicoClient {
     const pimlicoClient = this.chainManager.getPaymasterClient(chainId);
@@ -41,7 +46,14 @@ export class Paymaster {
 
   /**
    * Prepares approval transaction if needed for ERC-20 paymaster
-   * @private
+   *
+   * @internal
+   * @category Paymaster
+   * @param paymasterToken Paymaster token address
+   * @param walletAddress Wallet address
+   * @param chainId Target chain ID
+   * @returns Promise resolving to the approval transaction data or null if allowance exists
+   * @throws Error if no public client is available
    */
   private async preparePaymasterApproval(
     paymasterToken: Address,
@@ -74,6 +86,15 @@ export class Paymaster {
 
   /**
    * Prepares calls array with approval if needed for ERC-20 paymaster
+   *
+   * @internal
+   * @category Paymaster
+   * @param transactionData Transaction data to prepare
+   * @param paymasterToken Paymaster token address
+   * @param walletAddress Wallet address
+   * @param chainId Target chain ID
+   * @returns Prepared calls array with approval if needed
+   * @throws Error if no paymaster URL is configured
    */
   async prepareCallsWithApproval(
     transactionData: TransactionData | TransactionData[],
@@ -96,6 +117,13 @@ export class Paymaster {
 
   /**
    * Creates a SmartAccountClient configured with ERC-20 paymaster
+   *
+   * @internal
+   * @category Paymaster
+   * @param account Coinbase smart account
+   * @param chainId Target chain ID
+   * @returns SmartAccountClient instance
+   * @throws Error if no bundler URL is configured
    */
   createSmartAccountClient(
     account: ToCoinbaseSmartAccountReturnType,
@@ -130,6 +158,15 @@ export class Paymaster {
 
   /**
    * Sends transaction(s) with ERC-20 paymaster
+   *
+   * @internal
+   * @category Paymaster
+   * @param transactionData Transaction data to send
+   * @param account Coinbase smart account
+   * @param walletAddress Wallet address
+   * @param chainId Target chain ID
+   * @param paymasterToken Paymaster token address
+   * @returns Promise resolving to the transaction hash
    */
   async sendWithERC20Paymaster(
     transactionData: TransactionData | TransactionData[],
