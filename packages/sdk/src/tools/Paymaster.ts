@@ -35,13 +35,7 @@ export class Paymaster {
    * @throws Error if no paymaster URL is configured
    */
   private getPaymasterClient(chainId: SupportedChainId): PimlicoClient {
-    const pimlicoClient = this.chainManager.getPaymasterClient(chainId);
-    if (!pimlicoClient) {
-      throw new Error(
-        'Paymaster client is not available. Probably the paymaster URL is not configured for this chain',
-      );
-    }
-    return pimlicoClient;
+    return this.chainManager.getPaymasterClient(chainId);
   }
 
   /**
