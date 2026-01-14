@@ -217,6 +217,7 @@ this.sdk = new MyceliumSDK({
     chainId: '...',
     rpcUrl: '...',
     bundlerUrl: '...',
+    paymasterUrl: '...',
   },
   protocolsRouterConfig: {
     riskLevel: '...',

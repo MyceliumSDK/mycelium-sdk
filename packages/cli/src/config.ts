@@ -23,6 +23,7 @@ export const getEnvsConfig = () => {
       chainId: parseInt(getEnv('CHAIN_ID')),
       rpcUrl: getEnv('RPC_URL'),
       bundlerUrl: getEnv('BUNDLER_URL'),
+      paymasterUrl: getEnv('PAYMASTER_URL'),
     },
     protocolsSecurityConfig: {
       riskLevel: getEnv('PROTOCOL_RISK_LEVEL'),

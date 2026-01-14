@@ -55,7 +55,11 @@ import type { OnchainConfig } from '@/types/api';
  *
  * // Option 1: Initialize with API key (fetches config from backend)
  * const sdk = await MyceliumSDK.init({
- *   apiKey: 'sk_...'
+ *   apiKey: 'sk_...',
+ *   chainId: 8453,
+ *   protocolsSecurityConfig: {
+ *     riskLevel: "low",
+ *   },
  * });
  *
  * // Option 2: Initialize with full configuration
@@ -170,6 +174,7 @@ export class MyceliumSDK {
             chainId: config.chainId || backendConfig.chainId,
             rpcUrl: backendConfig.rpcUrl,
             bundlerUrl: backendConfig.bundlerUrl,
+            paymasterUrl: backendConfig.paymasterUrl,
           },
           protocolsSecurityConfig: config.protocolsSecurityConfig,
           coinbaseCDPConfig: {

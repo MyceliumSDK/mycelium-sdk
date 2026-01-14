@@ -8,7 +8,8 @@ export const printAvailableCliOptions = () => {
   console.log('6 >> Top up from faucet');
   console.log('7 >> Deposit to vault');
   console.log('8 >> Withdraw from vault');
-  console.log('9 >> Exit');
+  console.log('9 >> Send transaction (gas sponsored by USDC)');
+  console.log('10 >> Exit');
   console.log('--------------------------------');
 };
 
@@ -30,3 +31,5 @@ export const isValidAmountFormat = (amount: string): boolean => {
 
   return numberPattern.test(trimmed);
 };
+
+export const USDC_TOKEN_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';

@@ -13,7 +13,7 @@ export const availableProtocols: Protocol[] = [
       name: 'Spark',
       website: 'https://spark.fi/',
       logo: '/logos/spark.png',
-      supportedChains: [8453],
+      supportedChains: [8453, 84532],
       riskLevel: 'low',
       isActive: true,
     },

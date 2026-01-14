@@ -10,7 +10,11 @@ import {
 import { formatBalancesToDisplay, formatVaultInfoToDisplay, getEnv } from './utils/formatters';
 import { WalletDatabase } from './libs/database';
 import { getEnvsConfig } from './config';
-import { isValidAmountFormat, printAvailableCliOptions } from './utils/cli-utils';
+import {
+  isValidAmountFormat,
+  printAvailableCliOptions,
+  USDC_TOKEN_ADDRESS,
+} from './utils/cli-utils';
 import { welcomeBanner } from './utils/ascii-banner';
 import { logError, logResult, logState } from './utils/logger';
 
@@ -113,7 +117,9 @@ export class CLI {
           await this.withdrawFromVault();
           break;
         case '9':
-        case 'exit':
+          await this.sendTransaction();
+          break;
+        case '10':
           logState('Exiting CLI. Goodbye!');
           running = false;
           process.exit(0);
@@ -404,6 +410,51 @@ export class CLI {
     logState('Withdrawing from vault...');
     const result = await this.wallet.withdraw(selectedVault.vaultInfo, amountToWithdraw);
     logResult('Withdraw completed:', result.hash);
+  }
+
+  private async sendTransaction() {
+    if (!this.wallet) {
+      logError("You didn't login. Please select Option 1 or 2 first to login or create an account");
+      return;
+    }
+
+    logState('⚠️ Current transaction will be sent with a gas sponsorship by USDC token');
+    const addressToSend = await this.ask('Enter the address to send: ');
+    if (!addressToSend) {
+      logError('Address is required');
+      return;
+    }
+
+    const balances = await this.wallet.getBalance();
+    const usdcBalance =
+      balances.find((balance) => balance.symbol === 'USDC')?.totalFormattedBalance ?? '0';
+
+    const amountToSend = await this.ask(
+      `Enter the amount to send in USDC (current balance: ${usdcBalance} USDC): `,
+    );
+    if (!amountToSend) {
+      logError('Amount is required');
+      return;
+    }
+
+    const tokenData = await this.wallet.sendTokens(
+      parseFloat(amountToSend),
+      'usdc',
+      addressToSend as `0x${string}`,
+    );
+
+    const chainId = getEnv('CHAIN_ID');
+
+    if (!chainId) {
+      logError('Chain ID is not set in the environment variables');
+      return;
+    }
+
+    const txn = await this.wallet.send(tokenData, parseInt(chainId), {
+      paymasterToken: USDC_TOKEN_ADDRESS,
+    });
+
+    logResult('Transaction sent successfully:', txn);
   }
 
   private ask(question: string): Promise<string> {

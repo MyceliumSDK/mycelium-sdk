@@ -54,9 +54,17 @@ export abstract class SmartWallet {
    *
    * @param transactionData Transaction data to execute
    * @param chainId Target blockchain chain ID
+   * @param options Optional parameters
+   * @param options.paymasterToken ERC-20 token address to use for gas payment (e.g., USDC)
    * @returns Promise resolving to the transaction {@link Hash}
    */
-  abstract send(transactionData: TransactionData, chainId: SupportedChainId): Promise<Hash>;
+  abstract send(
+    transactionData: TransactionData,
+    chainId: SupportedChainId,
+    options?: {
+      paymasterToken?: Address;
+    },
+  ): Promise<Hash>;
 
   /**
    * Executes a batch of transactions through the smart wallet
@@ -69,9 +77,17 @@ export abstract class SmartWallet {
    *
    * @param transactionData Array of transaction data objects
    * @param chainId Target blockchain chain ID
+   * @param options Optional parameters
+   * @param options.paymasterToken ERC-20 token address to use for gas payment (e.g., USDC)
    * @returns Promise resolving to the transaction {@link Hash}
    */
-  abstract sendBatch(transactionData: TransactionData[], chainId: SupportedChainId): Promise<Hash>;
+  abstract sendBatch(
+    transactionData: TransactionData[],
+    chainId: SupportedChainId,
+    options?: {
+      paymasterToken?: Address;
+    },
+  ): Promise<Hash>;
 
   /**
    * Prepares transaction data for sending tokens to another address
