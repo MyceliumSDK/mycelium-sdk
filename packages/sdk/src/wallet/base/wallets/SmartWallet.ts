@@ -111,9 +111,15 @@ export abstract class SmartWallet {
    * @internal
    * @category Yield
    * @param amount Amount to deposit in human-readable format
+   * @param options Optional parameters
+   * @param options.paymasterToken ERC-20 token address to use for gas payment (e.g., USDC)
    * @returns Promise resolving to a {@link VaultTxnResult}
    */
-  abstract earn(vaultInfo: VaultInfo, amount: string): Promise<VaultTxnResult>;
+  abstract earn(
+    vaultInfo: VaultInfo,
+    amount: string,
+    options?: { paymasterToken?: Address },
+  ): Promise<VaultTxnResult>;
 
   /**
    * Retrieves the balance of deposited funds in the selected protocol vault
@@ -130,9 +136,15 @@ export abstract class SmartWallet {
    * @internal
    * @category Yield
    * @param amount Human-readable amount of shares to withdraw
+   * @param options Optional parameters
+   * @param options.paymasterToken ERC-20 token address to use for gas payment (e.g., USDC)
    * @returns Promise resolving to a {@link VaultTxnResult}
    */
-  abstract withdraw(vaultInfo: VaultInfo, amount: string): Promise<VaultTxnResult>;
+  abstract withdraw(
+    vaultInfo: VaultInfo,
+    amount: string,
+    options?: { paymasterToken?: Address },
+  ): Promise<VaultTxnResult>;
 
   /**
    * Funds the smart wallet with the specified amount of the specified token via Coinbase CDP on-ramp service

@@ -83,7 +83,7 @@ export class ApiClient {
     operationType: OperationType,
     params?: Record<string, string>,
     protocolId?: string,
-    body?: Record<string, string | VaultInfo>,
+    body?: Record<string, string | number | VaultInfo>,
   ): Promise<ApiResponse<unknown>> {
     const { path, method } = this.operationTypeToUrlSettings[operationType];
 

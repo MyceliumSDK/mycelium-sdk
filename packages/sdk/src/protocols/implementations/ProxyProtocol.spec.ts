@@ -203,7 +203,7 @@ describe('ProxyProtocol integration tests', () => {
 
       expect(result.success).toBe(true);
       expect(result.hash).toBe('0xhash123');
-      expect(smartWallet.sendBatch).toHaveBeenCalledWith([mockOperationData], 8453);
+      expect(smartWallet.sendBatch).toHaveBeenCalledWith([mockOperationData], 8453, undefined);
       expect(apiClient.sendRequest).toHaveBeenCalledWith('deposit', undefined, 'spark', {
         vaultInfo: mockVaultInfo,
         amount: '1000',
@@ -253,6 +253,7 @@ describe('ProxyProtocol integration tests', () => {
           mockOperationData,
         ],
         8453,
+        undefined,
       );
 
       expect(result.success).toBe(true);
@@ -355,10 +356,10 @@ describe('ProxyProtocol integration tests', () => {
       expect(apiClient.sendRequest).toHaveBeenCalledWith('withdraw', undefined, 'spark', {
         vaultInfo: mockVaultInfo,
         amount: '500',
-        chainId: '8453',
+        chainId: 8453,
       });
 
-      expect(smartWallet.send).toHaveBeenCalledWith(mockOperationData, 8453);
+      expect(smartWallet.send).toHaveBeenCalledWith(mockOperationData, 8453, undefined);
       expect(result.success).toBe(true);
       expect(result.hash).toBe('0xhash456');
     });
@@ -394,7 +395,7 @@ describe('ProxyProtocol integration tests', () => {
       expect(apiClient.sendRequest).toHaveBeenCalledWith('withdraw', undefined, 'spark', {
         vaultInfo: mockVaultInfo,
         amount: mockProxyBalance.currentBalance,
-        chainId: '8453',
+        chainId: 8453,
       });
 
       expect(result.success).toBe(true);

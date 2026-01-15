@@ -82,6 +82,7 @@ export abstract class BaseProtocol {
     vaultInfo: VaultInfo,
     amount: string,
     smartWallet: SmartWallet,
+    options?: { paymasterToken?: Address },
   ): Promise<VaultTxnResult>;
 
   /**
@@ -95,6 +96,7 @@ export abstract class BaseProtocol {
     vaultInfo: VaultInfo,
     amountInShares: string,
     smartWallet: SmartWallet,
+    options?: { paymasterToken?: Address },
   ): Promise<VaultTxnResult>;
 
   /**

@@ -337,7 +337,7 @@ describe('DefaultSmartWallet integration tests', () => {
 
       const result = await wallet.earn(mockVaultInfo, amount);
 
-      expect(depositSpy).toHaveBeenCalledWith(mockVaultInfo, amount, wallet);
+      expect(depositSpy).toHaveBeenCalledWith(mockVaultInfo, amount, wallet, undefined);
       expect(result.hash).toBe(
         '0x3c36293ab6884794bda1271b570ca9e9b68a406e93486359e7213a30f88c349b',
       );
@@ -360,7 +360,7 @@ describe('DefaultSmartWallet integration tests', () => {
 
       const result = await wallet.withdraw(mockVaultInfo, amount);
 
-      expect(withdrawSpy).toHaveBeenCalledWith(mockVaultInfo, amount, wallet);
+      expect(withdrawSpy).toHaveBeenCalledWith(mockVaultInfo, amount, wallet, undefined);
       expect(result.hash).toBe(
         '0x3c36293ab6884794bda1271b570ca9e9b68a406e93486359e7213a30f88c349b',
       );
