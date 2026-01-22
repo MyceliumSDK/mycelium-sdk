@@ -9,6 +9,7 @@ import {
   encodeFunctionData,
   erc20Abi,
   formatUnits,
+  maxUint256,
   parseUnits,
   type Address,
   type Hash,
@@ -186,6 +187,7 @@ describe('SparkProtocol integration tests', () => {
           },
         ],
         8453,
+        undefined,
       );
 
       expect(result.success).toBe(true);
@@ -233,9 +235,64 @@ describe('SparkProtocol integration tests', () => {
           },
         ],
         8453,
+        undefined,
       );
 
       expect(result.success).toBe(true);
+    });
+
+    it('should deposit with paymaster token when paymaster token equals deposit token', async () => {
+      const paymasterToken = mockVaultInfo.tokenAddress;
+      const mockPublicClient = chainManager.getPublicClient(8453);
+
+      // Mock balance check (for gas reserve) and allowance check
+      vi.mocked(mockPublicClient.readContract as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(BigInt('2000000000'))
+        .mockResolvedValueOnce(BigInt('2000000000'));
+
+      const mockDepositData = '0xhash123' as `0x${string}`;
+      vi.mocked(encodeFunctionData).mockReturnValue(mockDepositData);
+
+      (smartWallet.sendBatch as ReturnType<typeof vi.fn>).mockResolvedValue('0xhash456' as Hash);
+
+      const result = await sparkProtocol.deposit(mockVaultInfo, '1000', smartWallet, {
+        paymasterToken,
+      });
+
+      // Verify balance check was performed
+      expect(mockPublicClient.readContract).toHaveBeenCalledWith({
+        address: mockVaultInfo.tokenAddress,
+        abi: erc20Abi,
+        functionName: 'balanceOf',
+        args: [expect.any(String)],
+      });
+
+      expect(smartWallet.sendBatch).toHaveBeenCalledWith(
+        [
+          {
+            to: mockVaultInfo.vaultAddress,
+            data: mockDepositData,
+          },
+        ],
+        8453,
+        { paymasterToken },
+      );
+
+      expect(result.success).toBe(true);
+    });
+
+    it('should throw error when deposit amount exceeds balance minus gas reserve', async () => {
+      const paymasterToken = mockVaultInfo.tokenAddress;
+      const mockPublicClient = chainManager.getPublicClient(8453);
+
+      // Mock balance that's too low after gas reserve
+      vi.mocked(mockPublicClient.readContract as ReturnType<typeof vi.fn>).mockResolvedValue(
+        BigInt('500000000'),
+      );
+
+      await expect(
+        sparkProtocol.deposit(mockVaultInfo, '1000', smartWallet, { paymasterToken }),
+      ).rejects.toThrow('Insufficient balance. Must reserve tokens for gas payment.');
     });
   });
 
@@ -244,13 +301,129 @@ describe('SparkProtocol integration tests', () => {
       await sparkProtocol.init(chainManager);
     });
 
-    it('should withdraw specified amount from vault', async () => {
-      vi.mocked(parseUnits).mockReturnValue(BigInt('500000000')); // 500 USDC
+    it('should throw error when public client is not initialized for max shares', async () => {
+      const uninitializedProtocol = new SparkProtocol();
+
+      await expect(
+        uninitializedProtocol.withdraw(mockVaultInfo, undefined, smartWallet),
+      ).rejects.toThrow('Protocol must be initialized');
+    });
+
+    it('should withdraw with paymaster token when paymaster token equals withdraw token', async () => {
+      const paymasterToken = mockVaultInfo.tokenAddress;
+      const mockPublicClient = chainManager.getPublicClient(8453);
+
+      // Mock balance check for gas reserve and allowance check for sUSDC shares
+      vi.mocked(mockPublicClient.readContract as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(BigInt('2000000000'))
+        .mockResolvedValueOnce(BigInt('1000000000'));
+
+      vi.mocked(parseUnits).mockReturnValue(BigInt('500000000'));
 
       const mockWithdrawData = '0xhash123' as `0x${string}`;
       vi.mocked(encodeFunctionData).mockReturnValue(mockWithdrawData);
 
-      (smartWallet.send as ReturnType<typeof vi.fn>).mockResolvedValue('0xhash456' as Hash);
+      (smartWallet.sendBatch as ReturnType<typeof vi.fn>).mockResolvedValue('0xhash456' as Hash);
+
+      const result = await sparkProtocol.withdraw(mockVaultInfo, '500', smartWallet, {
+        paymasterToken,
+      });
+
+      // Verify balance check was performed
+      expect(mockPublicClient.readContract).toHaveBeenCalledWith({
+        address: mockVaultInfo.tokenAddress,
+        abi: erc20Abi,
+        functionName: 'balanceOf',
+        args: [expect.any(String)],
+      });
+
+      expect(smartWallet.sendBatch).toHaveBeenCalledWith(
+        [
+          {
+            to: mockVaultInfo.vaultAddress,
+            data: mockWithdrawData,
+          },
+        ],
+        8453,
+        { paymasterToken },
+      );
+
+      expect(result.success).toBe(true);
+    });
+
+    it('should withdraw with paymaster token and include approval for sUSDC shares when needed', async () => {
+      const paymasterToken = mockVaultInfo.tokenAddress;
+      const mockPublicClient = chainManager.getPublicClient(8453);
+
+      // Mock balance check for gas reserve and no allowance for sUSDC shares
+      vi.mocked(mockPublicClient.readContract as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(BigInt('2000000000'))
+        .mockResolvedValueOnce(0n);
+
+      vi.mocked(parseUnits).mockReturnValue(BigInt('500000000'));
+
+      const mockApproveData = '0xhash123' as `0x${string}`;
+      const mockWithdrawData = '0xhash456' as `0x${string}`;
+
+      vi.mocked(encodeFunctionData)
+        .mockReturnValueOnce(mockApproveData)
+        .mockReturnValueOnce(mockWithdrawData);
+
+      (smartWallet.sendBatch as ReturnType<typeof vi.fn>).mockResolvedValue('0xhash789' as Hash);
+
+      const result = await sparkProtocol.withdraw(mockVaultInfo, '500', smartWallet, {
+        paymasterToken,
+      });
+
+      expect(encodeFunctionData).toHaveBeenCalledWith({
+        abi: erc20Abi,
+        functionName: 'approve',
+        args: [mockVaultInfo.vaultAddress, maxUint256],
+      });
+
+      expect(smartWallet.sendBatch).toHaveBeenCalledWith(
+        [
+          {
+            to: mockVaultInfo.vaultAddress,
+            data: mockApproveData,
+          },
+          {
+            to: mockVaultInfo.vaultAddress,
+            data: mockWithdrawData,
+          },
+        ],
+        8453,
+        { paymasterToken },
+      );
+
+      expect(result.success).toBe(true);
+    });
+
+    it('should throw error when wallet balance is insufficient for gas payment', async () => {
+      const paymasterToken = mockVaultInfo.tokenAddress;
+      const mockPublicClient = chainManager.getPublicClient(8453);
+
+      vi.mocked(mockPublicClient.readContract as ReturnType<typeof vi.fn>).mockResolvedValue(
+        BigInt('0'),
+      );
+
+      await expect(
+        sparkProtocol.withdraw(mockVaultInfo, '500', smartWallet, { paymasterToken }),
+      ).rejects.toThrow('Insufficient wallet balance for gas payment');
+    });
+
+    it('should withdraw specified amount from vault', async () => {
+      const mockPublicClient = chainManager.getPublicClient(8453);
+      vi.mocked(parseUnits).mockReturnValue(BigInt('500000000'));
+
+      vi.mocked(mockPublicClient.readContract as ReturnType<typeof vi.fn>).mockResolvedValue(
+        BigInt('1000000000'),
+      );
+
+      const mockWithdrawData = '0xhash123' as `0x${string}`;
+      vi.mocked(encodeFunctionData).mockReturnValue(mockWithdrawData);
+
+      (smartWallet.sendBatch as ReturnType<typeof vi.fn>).mockResolvedValue('0xhash456' as Hash);
 
       const result = await sparkProtocol.withdraw(mockVaultInfo, '500', smartWallet);
 
@@ -261,12 +434,15 @@ describe('SparkProtocol integration tests', () => {
         args: [BigInt('500000000'), expect.any(String), expect.any(String)],
       });
 
-      expect(smartWallet.send).toHaveBeenCalledWith(
-        {
-          to: mockVaultInfo.vaultAddress,
-          data: mockWithdrawData,
-        },
+      expect(smartWallet.sendBatch).toHaveBeenCalledWith(
+        [
+          {
+            to: mockVaultInfo.vaultAddress,
+            data: mockWithdrawData,
+          },
+        ],
         8453,
+        undefined,
       );
 
       expect(result.success).toBe(true);
@@ -284,7 +460,7 @@ describe('SparkProtocol integration tests', () => {
       const mockRedeemData = '0xhash123' as `0x${string}`;
       vi.mocked(encodeFunctionData).mockReturnValue(mockRedeemData);
 
-      (smartWallet.send as ReturnType<typeof vi.fn>).mockResolvedValue('0xhash456' as Hash);
+      (smartWallet.sendBatch as ReturnType<typeof vi.fn>).mockResolvedValue('0xhash456' as Hash);
 
       const result = await sparkProtocol.withdraw(mockVaultInfo, undefined, smartWallet);
 
@@ -301,12 +477,15 @@ describe('SparkProtocol integration tests', () => {
         args: [mockMaxShares, expect.any(String), expect.any(String)],
       });
 
-      expect(smartWallet.send).toHaveBeenCalledWith(
-        {
-          to: mockVaultInfo.vaultAddress,
-          data: mockRedeemData,
-        },
+      expect(smartWallet.sendBatch).toHaveBeenCalledWith(
+        [
+          {
+            to: mockVaultInfo.vaultAddress,
+            data: mockRedeemData,
+          },
+        ],
         8453,
+        undefined,
       );
 
       expect(result.success).toBe(true);
@@ -317,7 +496,7 @@ describe('SparkProtocol integration tests', () => {
 
       await expect(
         uninitializedProtocol.withdraw(mockVaultInfo, undefined, smartWallet),
-      ).rejects.toThrow('Public client not initialized');
+      ).rejects.toThrow('Protocol must be initialized');
     });
   });
 

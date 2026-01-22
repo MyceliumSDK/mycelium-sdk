@@ -2,7 +2,14 @@ import { BaseProtocol } from '@/protocols/base/BaseProtocol';
 import type { ChainManager } from '@/tools/ChainManager';
 import type { SmartWallet } from '@/wallet/base/wallets/SmartWallet';
 
-import { type Address, encodeFunctionData, erc20Abi, formatUnits, parseUnits } from 'viem';
+import {
+  type Address,
+  encodeFunctionData,
+  erc20Abi,
+  formatUnits,
+  maxUint256,
+  parseUnits,
+} from 'viem';
 
 import { SPARK_VAULT_ABI, SPARK_SSR_ORACLE_ABI } from '@/abis/protocols/spark';
 import {
@@ -110,39 +117,75 @@ export class SparkProtocol extends BaseProtocol {
     vaultInfo: VaultInfo,
     amount: string,
     smartWallet: SmartWallet,
+    options?: { paymasterToken?: Address },
   ): Promise<VaultTxnResult> {
-    const owner = await smartWallet.getAddress();
-    const assets = parseUnits(amount, vaultInfo.tokenDecimals);
+    const currentAddress = await smartWallet.getAddress();
+    const depositTokenDecimals = vaultInfo.tokenDecimals;
+    const depositTokenAddress = vaultInfo.tokenAddress;
+    const vaultAddress = vaultInfo.vaultAddress;
+
+    const rawDepositAmount = parseUnits(amount, vaultInfo.tokenDecimals);
+
+    const operationsCallData = [];
+
+    // If paymaster token and deposit token are the same, reserve balance for gas
+    if (
+      options?.paymasterToken &&
+      options.paymasterToken.toLowerCase() === depositTokenAddress.toLowerCase()
+    ) {
+      this.ensureInitialized();
+      const publicClient = this.chainManager!.getPublicClient(this.selectedChainId!);
+      const balance = await publicClient.readContract({
+        address: depositTokenAddress,
+        abi: erc20Abi,
+        functionName: 'balanceOf',
+        args: [currentAddress],
+      });
+
+      // Reserve ~1% for gas payment (minimum 1 unit)
+      const gasReserve = balance / 100n > 0n ? balance / 100n : 1n;
+      const maxDepositAmount = balance > gasReserve ? balance - gasReserve : 0n;
+
+      if (rawDepositAmount > maxDepositAmount) {
+        const maxDepositFormatted = Number(maxDepositAmount) / 10 ** depositTokenDecimals;
+        throw new Error(
+          `Insufficient balance. Must reserve tokens for gas payment. Max deposit: ${maxDepositFormatted.toFixed(depositTokenDecimals)}`,
+        );
+      }
+    }
 
     const allowance = await this.checkAllowance(
-      vaultInfo.tokenAddress,
-      vaultInfo.vaultAddress,
-      owner,
+      depositTokenAddress,
+      vaultAddress,
+      currentAddress,
       this.selectedChainId!,
     );
 
-    const ops: { to: Address; data: `0x${string}` }[] = [];
-
-    if (allowance < assets) {
-      ops.push({
-        to: vaultInfo.tokenAddress,
+    if (allowance < rawDepositAmount) {
+      const approveData = {
+        to: depositTokenAddress,
         data: encodeFunctionData({
           abi: erc20Abi,
           functionName: 'approve',
-          args: [vaultInfo.vaultAddress, assets],
+          args: [vaultAddress, rawDepositAmount],
         }),
-      });
+      };
+
+      operationsCallData.push(approveData);
     }
-    ops.push({
-      to: vaultInfo.vaultAddress,
+
+    const depositData = {
+      to: vaultAddress,
       data: encodeFunctionData({
         abi: SPARK_VAULT_ABI,
         functionName: 'deposit',
-        args: [assets, owner] as const,
+        args: [rawDepositAmount, currentAddress] as const,
       }),
-    });
+    };
 
-    const hash = await smartWallet.sendBatch(ops, this.selectedChainId!);
+    operationsCallData.push(depositData);
+
+    const hash = await smartWallet.sendBatch(operationsCallData, this.selectedChainId!, options);
     return { success: true, hash };
   }
 
@@ -158,36 +201,92 @@ export class SparkProtocol extends BaseProtocol {
     vaultInfo: VaultInfo,
     amount: string | undefined,
     smartWallet: SmartWallet,
+    options?: { paymasterToken?: Address },
   ): Promise<VaultTxnResult> {
-    const owner = await smartWallet.getAddress();
+    const currentAddress = await smartWallet.getAddress();
 
-    let withdrawData: { to: Address; data: `0x${string}` };
+    const tokenDecimals = vaultInfo.tokenDecimals;
+    const tokenAddress = vaultInfo.tokenAddress;
+    const vaultAddress = vaultInfo.vaultAddress;
 
+    const operationsCallData = [];
+
+    if (
+      options?.paymasterToken &&
+      options.paymasterToken.toLowerCase() === tokenAddress.toLowerCase()
+    ) {
+      this.ensureInitialized();
+      const publicClient = this.chainManager!.getPublicClient(this.selectedChainId!);
+      const walletBalance = await publicClient.readContract({
+        address: tokenAddress,
+        abi: erc20Abi,
+        functionName: 'balanceOf',
+        args: [currentAddress],
+      });
+
+      // Reserve ~1% for gas payment (minimum 1 unit)
+      // The wallet must have enough balance BEFORE withdrawal to pay for gas
+      const gasReserve = walletBalance / 100n > 0n ? walletBalance / 100n : 1n;
+      const minRequiredBalance = gasReserve;
+
+      if (walletBalance < minRequiredBalance) {
+        const minRequiredFormatted = Number(minRequiredBalance) / 10 ** tokenDecimals;
+        throw new Error(
+          `Insufficient wallet balance for gas payment. Wallet needs at least ${minRequiredFormatted.toFixed(tokenDecimals)} tokens to pay for gas before withdrawal.`,
+        );
+      }
+    }
+
+    // Check allowance of sUSDC shares (vaultAddress) for the vault (vaultAddress)
+    // In ERC-4626, the vault contract IS the share token
+    const allowance = await this.checkAllowance(
+      vaultAddress, // sUSDC shares token address (same as vault)
+      vaultAddress, // vault address (needs approval to spend shares)
+      currentAddress,
+      this.selectedChainId!,
+    );
+
+    // Approve vault to spend sUSDC shares if needed
+    if (allowance === 0n) {
+      const approveData = {
+        to: vaultAddress, // sUSDC share token
+        data: encodeFunctionData({
+          abi: erc20Abi,
+          functionName: 'approve',
+          args: [vaultAddress, maxUint256], // Approve vault to spend shares
+        }),
+      };
+      operationsCallData.push(approveData);
+    }
+
+    let withdrawCallData;
     if (amount) {
-      const assets = parseUnits(amount, vaultInfo.tokenDecimals);
+      const rawWithdrawAmount = parseUnits(amount, tokenDecimals);
 
-      withdrawData = {
-        to: vaultInfo.vaultAddress,
+      withdrawCallData = {
+        to: vaultAddress,
         data: encodeFunctionData({
           abi: SPARK_VAULT_ABI,
           functionName: 'withdraw',
-          args: [assets, owner, owner] as const,
+          args: [rawWithdrawAmount, currentAddress, currentAddress] as const,
         }),
       };
     } else {
-      const maxShares = await this.getMaxRedeemableShares(vaultInfo, owner);
+      const maxShares = await this.getMaxRedeemableShares(vaultInfo, currentAddress);
 
-      withdrawData = {
-        to: vaultInfo.vaultAddress,
+      withdrawCallData = {
+        to: vaultAddress,
         data: encodeFunctionData({
           abi: SPARK_VAULT_ABI,
           functionName: 'redeem',
-          args: [maxShares, owner, owner] as const,
+          args: [maxShares, currentAddress, currentAddress] as const,
         }),
       };
     }
 
-    const hash = await smartWallet.send(withdrawData, this.selectedChainId!);
+    operationsCallData.push(withdrawCallData);
+
+    const hash = await smartWallet.sendBatch(operationsCallData, this.selectedChainId!, options);
 
     return { success: true, hash };
   }

@@ -258,8 +258,10 @@ export class ProxyProtocol extends BaseProtocol {
     options?: { paymasterToken?: Address },
   ): Promise<VaultTxnResult> {
     const currentAddress = await smartWallet.getAddress();
-
     const earningBalances = await smartWallet.getEarnBalances();
+
+    const tokenDecimals = vaultInfo.tokenDecimals;
+    const tokenAddress = vaultInfo.tokenAddress;
 
     if (!earningBalances) {
       throw new Error('No earning balances found');
@@ -276,12 +278,12 @@ export class ProxyProtocol extends BaseProtocol {
 
     if (
       options?.paymasterToken &&
-      options.paymasterToken.toLowerCase() === vaultInfo.tokenAddress.toLowerCase()
+      options.paymasterToken.toLowerCase() === tokenAddress.toLowerCase()
     ) {
       this.ensureInitialized();
       const publicClient = this.chainManager!.getPublicClient(this.selectedChainId!);
       const walletBalance = await publicClient.readContract({
-        address: vaultInfo.tokenAddress,
+        address: tokenAddress,
         abi: erc20Abi,
         functionName: 'balanceOf',
         args: [currentAddress],
@@ -293,9 +295,9 @@ export class ProxyProtocol extends BaseProtocol {
       const minRequiredBalance = gasReserve;
 
       if (walletBalance < minRequiredBalance) {
-        const minRequiredFormatted = Number(minRequiredBalance) / 10 ** vaultInfo.tokenDecimals;
+        const minRequiredFormatted = Number(minRequiredBalance) / 10 ** tokenDecimals;
         throw new Error(
-          `Insufficient wallet balance for gas payment. Wallet needs at least ${minRequiredFormatted.toFixed(vaultInfo.tokenDecimals)} tokens to pay for gas before withdrawal.`,
+          `Insufficient wallet balance for gas payment. Wallet needs at least ${minRequiredFormatted.toFixed(tokenDecimals)} tokens to pay for gas before withdrawal.`,
         );
       }
     }
