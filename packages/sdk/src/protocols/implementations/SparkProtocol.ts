@@ -19,6 +19,7 @@ import {
   SPARK_VAULT,
 } from '@/protocols/constants/spark';
 import type { VaultBalance, VaultInfo, Vaults, VaultTxnResult } from '@/types/protocols/general';
+import { GAS_RESERVE_MINIMUM, GAS_RESERVE_PERCENTAGE } from '@/constants/paymaster';
 
 /**
  * @internal
@@ -133,25 +134,12 @@ export class SparkProtocol extends BaseProtocol {
       options?.paymasterToken &&
       options.paymasterToken.toLowerCase() === depositTokenAddress.toLowerCase()
     ) {
-      this.ensureInitialized();
-      const publicClient = this.chainManager!.getPublicClient(this.selectedChainId!);
-      const balance = await publicClient.readContract({
-        address: depositTokenAddress,
-        abi: erc20Abi,
-        functionName: 'balanceOf',
-        args: [currentAddress],
-      });
-
-      // Reserve ~1% for gas payment (minimum 1 unit)
-      const gasReserve = balance / 100n > 0n ? balance / 100n : 1n;
-      const maxDepositAmount = balance > gasReserve ? balance - gasReserve : 0n;
-
-      if (rawDepositAmount > maxDepositAmount) {
-        const maxDepositFormatted = Number(maxDepositAmount) / 10 ** depositTokenDecimals;
-        throw new Error(
-          `Insufficient balance. Must reserve tokens for gas payment. Max deposit: ${maxDepositFormatted.toFixed(depositTokenDecimals)}`,
-        );
-      }
+      await this.validateGasReserve(
+        depositTokenAddress,
+        currentAddress,
+        depositTokenDecimals,
+        rawDepositAmount,
+      );
     }
 
     const allowance = await this.checkAllowance(
@@ -215,26 +203,7 @@ export class SparkProtocol extends BaseProtocol {
       options?.paymasterToken &&
       options.paymasterToken.toLowerCase() === tokenAddress.toLowerCase()
     ) {
-      this.ensureInitialized();
-      const publicClient = this.chainManager!.getPublicClient(this.selectedChainId!);
-      const walletBalance = await publicClient.readContract({
-        address: tokenAddress,
-        abi: erc20Abi,
-        functionName: 'balanceOf',
-        args: [currentAddress],
-      });
-
-      // Reserve ~1% for gas payment (minimum 1 unit)
-      // The wallet must have enough balance BEFORE withdrawal to pay for gas
-      const gasReserve = walletBalance / 100n > 0n ? walletBalance / 100n : 1n;
-      const minRequiredBalance = gasReserve;
-
-      if (walletBalance < minRequiredBalance) {
-        const minRequiredFormatted = Number(minRequiredBalance) / 10 ** tokenDecimals;
-        throw new Error(
-          `Insufficient wallet balance for gas payment. Wallet needs at least ${minRequiredFormatted.toFixed(tokenDecimals)} tokens to pay for gas before withdrawal.`,
-        );
-      }
+      await this.validateGasReserve(tokenAddress, currentAddress, tokenDecimals);
     }
 
     // Check allowance of sUSDC shares (vaultAddress) for the vault (vaultAddress)
@@ -289,6 +258,81 @@ export class SparkProtocol extends BaseProtocol {
     const hash = await smartWallet.sendBatch(operationsCallData, this.selectedChainId!, options);
 
     return { success: true, hash };
+  }
+
+  /**
+   * Validate gas reserve balance for operations using paymaster
+   * Ensures sufficient balance remains for gas payment when using paymaster with the same token
+   * @param tokenAddress Token address to check balance for
+   * @param walletAddress Wallet address to check
+   * @param tokenDecimals Number of decimals for the token
+   * @param operationAmount Optional: Amount for deposit operation (in token units). If provided, validates deposit; otherwise validates withdraw
+   * @throws Error if balance is insufficient for gas payment or operation
+   */
+  private async validateGasReserve(
+    tokenAddress: Address,
+    walletAddress: Address,
+    tokenDecimals: number,
+    operationAmount?: bigint,
+  ): Promise<void> {
+    this.ensureInitialized();
+    const publicClient = this.chainManager!.getPublicClient(this.selectedChainId!);
+    const balance = await publicClient.readContract({
+      address: tokenAddress,
+      abi: erc20Abi,
+      functionName: 'balanceOf',
+      args: [walletAddress],
+    });
+
+    const gasReserve = this.calculateGasReserve(balance, tokenDecimals);
+
+    if (operationAmount !== undefined) {
+      // Deposit validation: check if operation amount exceeds available balance after gas reserve
+      const maxDepositAmount = balance > gasReserve ? balance - gasReserve : 0n;
+
+      if (operationAmount > maxDepositAmount) {
+        const maxDepositFormatted = Number(maxDepositAmount) / 10 ** tokenDecimals;
+        throw new Error(
+          `Insufficient balance. Must reserve tokens for gas payment. Max deposit: ${maxDepositFormatted.toFixed(tokenDecimals)}`,
+        );
+      }
+    } else {
+      // Withdraw validation: check if balance meets minimum gas reserve requirement
+      const minRequiredBalance = gasReserve;
+
+      if (balance < minRequiredBalance) {
+        const minRequiredFormatted = Number(minRequiredBalance) / 10 ** tokenDecimals;
+        throw new Error(
+          `Insufficient wallet balance for gas payment. Wallet needs at least ${minRequiredFormatted.toFixed(tokenDecimals)} tokens to pay for gas before withdrawal.`,
+        );
+      }
+    }
+  }
+
+  /**
+   * Calculate gas reserve amount based on balance and token decimals
+   * Uses a more sophisticated calculation that considers token decimal places:
+   * - For tokens with low decimals (≤8): Uses a fixed minimum amount (e.g., 0.001 tokens)
+   * - For tokens with high decimals (>8): Uses 1% of balance with a minimum of 1 unit
+   * @param balance Current token balance
+   * @param tokenDecimals Number of decimals for the token
+   * @returns Gas reserve amount in token units
+   */
+  private calculateGasReserve(balance: bigint, tokenDecimals: number): bigint {
+    // For tokens with low decimals (e.g., WBTC with 8 decimals), use a fixed minimum
+    // This ensures sufficient gas coverage for high-value tokens
+    if (tokenDecimals <= 6) {
+      // Reserve 0.001 tokens (or 1 unit if that's larger)
+      const fixedReserve = parseUnits(GAS_RESERVE_MINIMUM.toString(), tokenDecimals);
+      const oneUnit = 1n;
+      return fixedReserve > oneUnit ? fixedReserve : oneUnit;
+    }
+
+    // For tokens with high decimals, use percentage-based approach
+    // Reserve 1% of balance with a minimum of 1 unit
+    const percentageReserve = (balance * BigInt(GAS_RESERVE_PERCENTAGE)) / 100n;
+    const oneUnit = 1n;
+    return percentageReserve > 0n ? percentageReserve : oneUnit;
   }
 
   /**
