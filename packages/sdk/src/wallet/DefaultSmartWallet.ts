@@ -191,12 +191,21 @@ export class DefaultSmartWallet extends SmartWallet {
    * @remarks
    * The protocol is selected on the SDK initialization step
    * @param amount Human-readable amount string
+   * @param options Optional parameters
+   * @param options.paymasterToken ERC-20 token address to use for gas payment (e.g., USDC)
    * @returns Transaction result for the deposit
    */
-  async earn(vaultInfo: VaultInfo, amount: string): Promise<VaultTxnResult> {
-    this.chainManager.getSupportedChain();
-
-    const depositTransactionResult = this.protocolProvider.deposit(vaultInfo, amount, this);
+  async earn(
+    vaultInfo: VaultInfo,
+    amount: string,
+    options?: { paymasterToken?: Address },
+  ): Promise<VaultTxnResult> {
+    const depositTransactionResult = this.protocolProvider.deposit(
+      vaultInfo,
+      amount,
+      this,
+      options,
+    );
 
     return depositTransactionResult;
   }
@@ -219,12 +228,23 @@ export class DefaultSmartWallet extends SmartWallet {
    * @public
    * @category Earn
    * @param amount Human-readable amount string
+   * @param options Optional parameters
+   * @param options.paymasterToken ERC-20 token address to use for gas payment (e.g., USDC)
    * @returns Transaction result for the withdrawal
    * @throws Error if the withdrawal fails
    * @throws Error a user didn't deposit anything
    */
-  async withdraw(vaultInfo: VaultInfo, amount: string): Promise<VaultTxnResult> {
-    const withdrawTransactionResult = await this.protocolProvider.withdraw(vaultInfo, amount, this);
+  async withdraw(
+    vaultInfo: VaultInfo,
+    amount: string,
+    options?: { paymasterToken?: Address },
+  ): Promise<VaultTxnResult> {
+    const withdrawTransactionResult = await this.protocolProvider.withdraw(
+      vaultInfo,
+      this,
+      amount,
+      options,
+    );
 
     return withdrawTransactionResult;
   }

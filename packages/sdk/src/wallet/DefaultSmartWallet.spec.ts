@@ -264,9 +264,6 @@ describe('DefaultSmartWallet integration tests', () => {
       };
       vi.mocked(bundlerClient.estimateUserOperationGas).mockResolvedValue(mockGasEstimate);
       vi.mocked(bundlerClient.sendUserOperation).mockResolvedValue('0xTransactionHash');
-      // vi.mocked(bundlerClient.waitForUserOperationReceipt).mockResolvedValue({
-      //   receipt: {} as any,
-      // });
 
       const result = await wallet.sendBatch(transactionData, chainId);
 
@@ -337,7 +334,31 @@ describe('DefaultSmartWallet integration tests', () => {
 
       const result = await wallet.earn(mockVaultInfo, amount);
 
-      expect(depositSpy).toHaveBeenCalledWith(mockVaultInfo, amount, wallet);
+      expect(depositSpy).toHaveBeenCalledWith(mockVaultInfo, amount, wallet, undefined);
+      expect(result.hash).toBe(
+        '0x3c36293ab6884794bda1271b570ca9e9b68a406e93486359e7213a30f88c349b',
+      );
+      expect(result.success).toBe(true);
+    });
+
+    it('should deposit to a vault with paymaster token option', async () => {
+      const wallet = new DefaultSmartWallet(
+        mockOwners,
+        mockSigner,
+        mockChainManager,
+        mockProtocol,
+        mockCoinbaseCDP,
+      );
+
+      const depositSpy = vi.mocked(mockProtocol.deposit as ReturnType<typeof vi.fn>);
+      const amount = '1000';
+      const paymasterToken = getRandomAddress();
+
+      const result = await wallet.earn(mockVaultInfo, amount, { paymasterToken });
+
+      expect(depositSpy).toHaveBeenCalledWith(mockVaultInfo, amount, wallet, {
+        paymasterToken,
+      });
       expect(result.hash).toBe(
         '0x3c36293ab6884794bda1271b570ca9e9b68a406e93486359e7213a30f88c349b',
       );
@@ -360,7 +381,31 @@ describe('DefaultSmartWallet integration tests', () => {
 
       const result = await wallet.withdraw(mockVaultInfo, amount);
 
-      expect(withdrawSpy).toHaveBeenCalledWith(mockVaultInfo, amount, wallet);
+      expect(withdrawSpy).toHaveBeenCalledWith(mockVaultInfo, wallet, amount, undefined);
+      expect(result.hash).toBe(
+        '0x3c36293ab6884794bda1271b570ca9e9b68a406e93486359e7213a30f88c349b',
+      );
+      expect(result.success).toBe(true);
+    });
+
+    it('should withdraw from a vault with paymaster token option', async () => {
+      const wallet = new DefaultSmartWallet(
+        mockOwners,
+        mockSigner,
+        mockChainManager,
+        mockProtocol,
+        mockCoinbaseCDP,
+      );
+
+      const withdrawSpy = vi.mocked(mockProtocol.withdraw as ReturnType<typeof vi.fn>);
+      const amount = '1000';
+      const paymasterToken = getRandomAddress();
+
+      const result = await wallet.withdraw(mockVaultInfo, amount, { paymasterToken });
+
+      expect(withdrawSpy).toHaveBeenCalledWith(mockVaultInfo, wallet, amount, {
+        paymasterToken,
+      });
       expect(result.hash).toBe(
         '0x3c36293ab6884794bda1271b570ca9e9b68a406e93486359e7213a30f88c349b',
       );

@@ -1,14 +1,9 @@
 import type { VaultInfo } from '@/types/protocols/general';
-import type { Hex } from '@privy-io/server-auth';
 import type { Address, Hash } from 'viem';
 
 export interface ProxyVaults {
   stableVaults: VaultInfo[];
   nonStableVaults: VaultInfo[];
-}
-export interface OperationCallDataType {
-  to: Address;
-  data: Hex;
 }
 
 export interface LogOperationDataResponse {

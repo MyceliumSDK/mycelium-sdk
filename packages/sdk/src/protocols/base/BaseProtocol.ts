@@ -6,8 +6,11 @@ import {
   createWalletClient,
   http,
   parseGwei,
+  parseUnits,
+  formatUnits,
   type PublicClient,
 } from 'viem';
+import { GAS_RESERVE_MINIMUM, GAS_RESERVE_PERCENTAGE } from '@/constants/paymaster';
 import type { SupportedChainId } from '@/constants/chains';
 import type { SmartWallet } from '@/wallet/base/wallets/SmartWallet';
 import type {
@@ -82,6 +85,7 @@ export abstract class BaseProtocol {
     vaultInfo: VaultInfo,
     amount: string,
     smartWallet: SmartWallet,
+    options?: { paymasterToken?: Address },
   ): Promise<VaultTxnResult>;
 
   /**
@@ -93,8 +97,9 @@ export abstract class BaseProtocol {
    */
   abstract withdraw(
     vaultInfo: VaultInfo,
-    amountInShares: string,
     smartWallet: SmartWallet,
+    amount?: string,
+    options?: { paymasterToken?: Address },
   ): Promise<VaultTxnResult>;
 
   /**
@@ -166,5 +171,99 @@ export abstract class BaseProtocol {
       functionName: 'allowance',
       args: [walletAddress, spenderAddress],
     });
+  }
+
+  /**
+   * Validate gas reserve balance for operations using paymaster
+   * Ensures sufficient balance remains for gas payment when using paymaster with the same token
+   * @param tokenAddress Token address to check balance for
+   * @param walletAddress Wallet address to check
+   * @param tokenDecimals Number of decimals for the token
+   * @param operationAmount Optional: Amount for deposit operation (in token units). If provided, validates deposit; otherwise validates withdraw
+   * @throws Error if balance is insufficient for gas payment or operation
+   */
+  protected async validateGasReserve(
+    tokenAddress: Address,
+    walletAddress: Address,
+    tokenDecimals: number,
+    operationAmount?: bigint,
+  ): Promise<void> {
+    this.ensureInitialized();
+    const chainId = this.getSelectedChainId();
+    const publicClient = this.chainManager!.getPublicClient(chainId);
+    const balance = await publicClient.readContract({
+      address: tokenAddress,
+      abi: erc20Abi,
+      functionName: 'balanceOf',
+      args: [walletAddress],
+    });
+
+    const gasReserve = this.calculateGasReserve(balance, tokenDecimals);
+
+    if (operationAmount !== undefined) {
+      // Check if operation amount exceeds available balance after gas reserve
+      const maxDepositAmount = balance > gasReserve ? balance - gasReserve : 0n;
+
+      if (operationAmount > maxDepositAmount) {
+        const maxDepositFormatted = formatUnits(maxDepositAmount, tokenDecimals);
+        throw new Error(
+          `Insufficient balance. Must reserve tokens for gas payment. Max deposit: ${maxDepositFormatted}`,
+        );
+      }
+    } else {
+      // Check if balance meets minimum gas reserve requirement
+      const minRequiredBalance = gasReserve;
+
+      if (balance < minRequiredBalance) {
+        const minRequiredFormatted = formatUnits(minRequiredBalance, tokenDecimals);
+        throw new Error(
+          `Insufficient wallet balance for gas payment. Wallet needs at least ${minRequiredFormatted} tokens to pay for gas before withdrawal.`,
+        );
+      }
+    }
+  }
+
+  /**
+   * Calculate gas reserve amount based on balance and token decimals
+   * Uses a more sophisticated calculation that considers token decimal places:
+   * - For tokens with low decimals (≤6): uses a fixed minimum amount configured via
+   *   GAS_RESERVE_MINIMUM (e.g., currently 0.01 tokens), with at least 1 unit reserved
+   * - For tokens with more than 6 decimals: uses the maximum of GAS_RESERVE_PERCENTAGE%
+   *   of the balance and a fixed minimum (GAS_RESERVE_MINIMUM), ensuring a balance-independent
+   *   minimum for withdraw validation
+   * @param balance Current token balance
+   * @param tokenDecimals Number of decimals for the token
+   * @returns Gas reserve amount in token units
+   */
+  protected calculateGasReserve(balance: bigint, tokenDecimals: number): bigint {
+    // For tokens with low decimals (e.g., 6-decimal tokens like USDC), use a fixed minimum
+    // This ensures sufficient gas coverage for high-value or low-decimal tokens
+    if (tokenDecimals <= 6) {
+      // Reserve GAS_RESERVE_MINIMUM tokens (e.g., 0.01) or 1 unit if that's larger
+      const fixedReserve = parseUnits(GAS_RESERVE_MINIMUM, tokenDecimals);
+      const oneUnit = 1n;
+      return fixedReserve > oneUnit ? fixedReserve : oneUnit;
+    }
+
+    // For tokens with more than 6 decimals, use the maximum of percentage-based and fixed minimum
+    // This ensures withdraw validation has a meaningful balance-independent minimum
+    const percentageReserve = (balance * BigInt(GAS_RESERVE_PERCENTAGE)) / 100n;
+    const fixedMinimum = parseUnits(GAS_RESERVE_MINIMUM, tokenDecimals);
+
+    // Return the maximum of the two to ensure adequate reserve for gas payment
+    return percentageReserve > 0n ? percentageReserve : fixedMinimum;
+  }
+
+  /**
+   * Get the selected chain ID, ensuring it has been initialized
+   * @returns The selected chain ID
+   * @throws Error if `init()` has not been called or chain ID is not set
+   */
+  protected getSelectedChainId(): SupportedChainId {
+    this.ensureInitialized();
+    if (this.selectedChainId === undefined) {
+      throw new Error('Protocol chain ID not set. Ensure init() was called successfully.');
+    }
+    return this.selectedChainId;
   }
 }

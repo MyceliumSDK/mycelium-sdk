@@ -10,11 +10,8 @@ import type {
   VaultInfo,
   VaultBalance,
 } from '@mycelium-sdk/core/types/protocols/general';
-import type {
-  ProxyVaults,
-  ProxyBalance,
-  OperationCallDataType,
-} from '@mycelium-sdk/core/types/protocols/proxy';
+import type { ProxyVaults, ProxyBalance } from '@mycelium-sdk/core/types/protocols/proxy';
+import type { TransactionData } from '@mycelium-sdk/core/types/transaction';
 import { encodeFunctionData, erc20Abi, parseUnits, type Address, type Hash } from 'viem';
 
 // Mock viem functions
@@ -178,7 +175,7 @@ describe('ProxyProtocol integration tests', () => {
         BigInt('2000000000'), // Allowance is greater than deposit amount
       );
 
-      const mockOperationData: OperationCallDataType = {
+      const mockOperationData: TransactionData = {
         to: mockVaultInfo.vaultAddress,
         data: '0x1234' as `0x${string}`,
       };
@@ -203,7 +200,7 @@ describe('ProxyProtocol integration tests', () => {
 
       expect(result.success).toBe(true);
       expect(result.hash).toBe('0xhash123');
-      expect(smartWallet.sendBatch).toHaveBeenCalledWith([mockOperationData], 8453);
+      expect(smartWallet.sendBatch).toHaveBeenCalledWith([mockOperationData], 8453, undefined);
       expect(apiClient.sendRequest).toHaveBeenCalledWith('deposit', undefined, 'spark', {
         vaultInfo: mockVaultInfo,
         amount: '1000',
@@ -220,7 +217,7 @@ describe('ProxyProtocol integration tests', () => {
       const mockApproveData = '0xhash123' as `0x${string}`;
       vi.mocked(encodeFunctionData).mockReturnValue(mockApproveData);
 
-      const mockOperationData: OperationCallDataType = {
+      const mockOperationData: TransactionData = {
         to: mockVaultInfo.vaultAddress,
         data: '0x1234' as `0x${string}`,
       };
@@ -253,6 +250,7 @@ describe('ProxyProtocol integration tests', () => {
           mockOperationData,
         ],
         8453,
+        undefined,
       );
 
       expect(result.success).toBe(true);
@@ -288,7 +286,7 @@ describe('ProxyProtocol integration tests', () => {
         BigInt('2000000000'),
       );
 
-      const mockOperationData: OperationCallDataType = {
+      const mockOperationData: TransactionData = {
         to: mockVaultInfo.vaultAddress,
         data: '0x1234' as `0x${string}`,
       };
@@ -317,6 +315,63 @@ describe('ProxyProtocol integration tests', () => {
         }),
       );
     });
+
+    it('should deposit with paymaster token when paymaster token equals deposit token', async () => {
+      const paymasterToken = mockVaultInfo.tokenAddress;
+      const mockPublicClient = chainManager.getPublicClient(8453);
+
+      // Mock balance check (for gas reserve) and allowance check
+      vi.mocked(mockPublicClient.readContract as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(BigInt('2000000000'))
+        .mockResolvedValueOnce(BigInt('2000000000'));
+
+      const mockOperationData: TransactionData = {
+        to: mockVaultInfo.vaultAddress,
+        data: '0x1234' as `0x${string}`,
+      };
+
+      (apiClient.sendRequest as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({
+          success: true,
+          data: mockOperationData,
+        })
+        .mockResolvedValueOnce({
+          success: true,
+        });
+
+      (smartWallet.sendBatch as ReturnType<typeof vi.fn>).mockResolvedValue('0xhash123' as Hash);
+
+      const result = await proxyProtocol.deposit(mockVaultInfo, '1000', smartWallet, {
+        paymasterToken,
+      });
+
+      expect(mockPublicClient.readContract).toHaveBeenCalledWith({
+        address: mockVaultInfo.tokenAddress,
+        abi: erc20Abi,
+        functionName: 'balanceOf',
+        args: [expect.any(String)],
+      });
+
+      expect(smartWallet.sendBatch).toHaveBeenCalledWith([mockOperationData], 8453, {
+        paymasterToken,
+      });
+      expect(result.success).toBe(true);
+      expect(result.hash).toBe('0xhash123');
+    });
+
+    it('should throw error when deposit amount exceeds balance minus gas reserve', async () => {
+      const paymasterToken = mockVaultInfo.tokenAddress;
+      const mockPublicClient = chainManager.getPublicClient(8453);
+
+      // Mock balance that's too low for gas reserve
+      vi.mocked(mockPublicClient.readContract as ReturnType<typeof vi.fn>).mockResolvedValue(
+        BigInt('500000000'),
+      );
+
+      await expect(
+        proxyProtocol.deposit(mockVaultInfo, '1000', smartWallet, { paymasterToken }),
+      ).rejects.toThrow('Insufficient balance. Must reserve tokens for gas payment.');
+    });
   });
 
   describe('withdraw', () => {
@@ -334,7 +389,7 @@ describe('ProxyProtocol integration tests', () => {
 
       vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(mockEarningBalances);
 
-      const mockOperationData: OperationCallDataType = {
+      const mockOperationData: TransactionData = {
         to: mockVaultInfo.vaultAddress,
         data: '0xhash123' as `0x${string}`,
       };
@@ -350,15 +405,15 @@ describe('ProxyProtocol integration tests', () => {
 
       (smartWallet.send as ReturnType<typeof vi.fn>).mockResolvedValue('0xhash456' as Hash);
 
-      const result = await proxyProtocol.withdraw(mockVaultInfo, '500', smartWallet);
+      const result = await proxyProtocol.withdraw(mockVaultInfo, smartWallet, '500');
 
       expect(apiClient.sendRequest).toHaveBeenCalledWith('withdraw', undefined, 'spark', {
         vaultInfo: mockVaultInfo,
         amount: '500',
-        chainId: '8453',
+        chainId: 8453,
       });
 
-      expect(smartWallet.send).toHaveBeenCalledWith(mockOperationData, 8453);
+      expect(smartWallet.send).toHaveBeenCalledWith(mockOperationData, 8453, undefined);
       expect(result.success).toBe(true);
       expect(result.hash).toBe('0xhash456');
     });
@@ -373,7 +428,7 @@ describe('ProxyProtocol integration tests', () => {
 
       vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(mockEarningBalances);
 
-      const mockOperationData: OperationCallDataType = {
+      const mockOperationData: TransactionData = {
         to: mockVaultInfo.vaultAddress,
         data: '0xhash123' as `0x${string}`,
       };
@@ -389,12 +444,12 @@ describe('ProxyProtocol integration tests', () => {
 
       (smartWallet.send as ReturnType<typeof vi.fn>).mockResolvedValue('0xhash456' as Hash);
 
-      const result = await proxyProtocol.withdraw(mockVaultInfo, '', smartWallet);
+      const result = await proxyProtocol.withdraw(mockVaultInfo, smartWallet);
 
       expect(apiClient.sendRequest).toHaveBeenCalledWith('withdraw', undefined, 'spark', {
         vaultInfo: mockVaultInfo,
         amount: mockProxyBalance.currentBalance,
-        chainId: '8453',
+        chainId: 8453,
       });
 
       expect(result.success).toBe(true);
@@ -403,7 +458,7 @@ describe('ProxyProtocol integration tests', () => {
     it('should throw error when no earning balances found', async () => {
       vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(null);
 
-      await expect(proxyProtocol.withdraw(mockVaultInfo, '500', smartWallet)).rejects.toThrow(
+      await expect(proxyProtocol.withdraw(mockVaultInfo, smartWallet, '500')).rejects.toThrow(
         'No earning balances found',
       );
     });
@@ -418,7 +473,7 @@ describe('ProxyProtocol integration tests', () => {
 
       vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(mockEarningBalances);
 
-      await expect(proxyProtocol.withdraw(mockVaultInfo, '500', smartWallet)).rejects.toThrow(
+      await expect(proxyProtocol.withdraw(mockVaultInfo, smartWallet, '500')).rejects.toThrow(
         'No earning balance found',
       );
     });
@@ -438,7 +493,7 @@ describe('ProxyProtocol integration tests', () => {
         error: 'API error',
       });
 
-      await expect(proxyProtocol.withdraw(mockVaultInfo, '500', smartWallet)).rejects.toThrow(
+      await expect(proxyProtocol.withdraw(mockVaultInfo, smartWallet, '500')).rejects.toThrow(
         'API error',
       );
     });
@@ -453,7 +508,7 @@ describe('ProxyProtocol integration tests', () => {
 
       vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(mockEarningBalances);
 
-      const mockOperationData: OperationCallDataType = {
+      const mockOperationData: TransactionData = {
         to: mockVaultInfo.vaultAddress,
         data: '0xhash123' as `0x${string}`,
       };
@@ -469,7 +524,7 @@ describe('ProxyProtocol integration tests', () => {
 
       (smartWallet.send as ReturnType<typeof vi.fn>).mockResolvedValue('0xhash456' as Hash);
 
-      await proxyProtocol.withdraw(mockVaultInfo, '500', smartWallet);
+      await proxyProtocol.withdraw(mockVaultInfo, smartWallet, '500');
 
       expect(apiClient.sendRequest).toHaveBeenCalledWith(
         'log',
@@ -481,6 +536,78 @@ describe('ProxyProtocol integration tests', () => {
           transactionHash: '0xhash456',
         }),
       );
+    });
+
+    it('should withdraw with paymaster token when paymaster token equals withdraw token', async () => {
+      const paymasterToken = mockVaultInfo.tokenAddress;
+      const mockPublicClient = chainManager.getPublicClient(8453);
+      const mockEarningBalances: VaultBalance[] = [
+        {
+          vaultInfo: mockVaultInfo,
+          balance: mockProxyBalance,
+        },
+      ];
+
+      vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(mockEarningBalances);
+
+      // Mock balance check for gas reserve
+      vi.mocked(mockPublicClient.readContract as ReturnType<typeof vi.fn>).mockResolvedValue(
+        BigInt('2000000000'),
+      );
+
+      const mockOperationData: TransactionData = {
+        to: mockVaultInfo.vaultAddress,
+        data: '0xhash123' as `0x${string}`,
+      };
+
+      (apiClient.sendRequest as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({
+          success: true,
+          data: mockOperationData,
+        })
+        .mockResolvedValueOnce({
+          success: true,
+        });
+
+      (smartWallet.send as ReturnType<typeof vi.fn>).mockResolvedValue('0xhash456' as Hash);
+
+      const result = await proxyProtocol.withdraw(mockVaultInfo, smartWallet, '500', {
+        paymasterToken,
+      });
+
+      // Verify balance check was performed
+      expect(mockPublicClient.readContract).toHaveBeenCalledWith({
+        address: mockVaultInfo.tokenAddress,
+        abi: erc20Abi,
+        functionName: 'balanceOf',
+        args: [expect.any(String)],
+      });
+
+      expect(smartWallet.send).toHaveBeenCalledWith(mockOperationData, 8453, { paymasterToken });
+      expect(result.success).toBe(true);
+      expect(result.hash).toBe('0xhash456');
+    });
+
+    it('should throw error when wallet balance is insufficient for gas payment', async () => {
+      const paymasterToken = mockVaultInfo.tokenAddress;
+      const mockPublicClient = chainManager.getPublicClient(8453);
+      const mockEarningBalances: VaultBalance[] = [
+        {
+          vaultInfo: mockVaultInfo,
+          balance: mockProxyBalance,
+        },
+      ];
+
+      vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(mockEarningBalances);
+
+      // Mock balance that's too low for gas reserve
+      vi.mocked(mockPublicClient.readContract as ReturnType<typeof vi.fn>).mockResolvedValue(
+        BigInt('0'),
+      );
+
+      await expect(
+        proxyProtocol.withdraw(mockVaultInfo, smartWallet, '500', { paymasterToken }),
+      ).rejects.toThrow('Insufficient wallet balance for gas payment');
     });
   });
 

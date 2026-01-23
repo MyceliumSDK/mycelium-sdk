@@ -352,7 +352,9 @@ export class CLI {
     }
 
     logState('Depositing to vault...');
-    const result = await this.wallet.earn(selectedVault.vaultInfo, amountToDeposit);
+    const result = await this.wallet.earn(selectedVault.vaultInfo, amountToDeposit, {
+      paymasterToken: USDC_TOKEN_ADDRESS,
+    });
     logResult(`Deposit completed: ${result.hash}`);
   }
 
@@ -394,7 +396,9 @@ export class CLI {
 
     const currentVaultBalance = selectedVault.currentBalance;
 
-    logState(`Current vault balance: ${currentVaultBalance.actualCurrentBalance}`);
+    logState(
+      `Current vault balance: ${currentVaultBalance.actualCurrentBalance || currentVaultBalance}`,
+    );
     const amountToWithdraw = await this.ask(
       `Enter the amount to withdraw (hit "enter" to withdraw all balance): `,
     );
@@ -408,7 +412,9 @@ export class CLI {
     }
 
     logState('Withdrawing from vault...');
-    const result = await this.wallet.withdraw(selectedVault.vaultInfo, amountToWithdraw);
+    const result = await this.wallet.withdraw(selectedVault.vaultInfo, amountToWithdraw, {
+      paymasterToken: USDC_TOKEN_ADDRESS,
+    });
     logResult('Withdraw completed:', result.hash);
   }
 

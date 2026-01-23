@@ -12,6 +12,7 @@ import {
   SPARK_VAULT,
 } from '@/protocols/constants/spark';
 import type { VaultBalance, VaultInfo, Vaults, VaultTxnResult } from '@/types/protocols/general';
+import type { TransactionData } from '@/types/transaction';
 
 /**
  * @internal
@@ -34,7 +35,7 @@ export class SparkProtocol extends BaseProtocol {
     this.chainManager = chainManager;
     this.selectedChainId = chainManager.getSupportedChain();
 
-    this.publicClient = chainManager.getPublicClient(this.selectedChainId!);
+    this.publicClient = chainManager.getPublicClient(this.getSelectedChainId());
 
     this.allVaults = SPARK_VAULT;
   }
@@ -110,39 +111,66 @@ export class SparkProtocol extends BaseProtocol {
     vaultInfo: VaultInfo,
     amount: string,
     smartWallet: SmartWallet,
+    options?: { paymasterToken?: Address },
   ): Promise<VaultTxnResult> {
-    const owner = await smartWallet.getAddress();
-    const assets = parseUnits(amount, vaultInfo.tokenDecimals);
+    const currentAddress = await smartWallet.getAddress();
+    const depositTokenDecimals = vaultInfo.tokenDecimals;
+    const depositTokenAddress = vaultInfo.tokenAddress;
+    const vaultAddress = vaultInfo.vaultAddress;
+
+    const rawDepositAmount = parseUnits(amount, vaultInfo.tokenDecimals);
+
+    const operationsCallData: TransactionData[] = [];
+
+    // If paymaster token and deposit token are the same, validate gas reserve balance
+    if (
+      options?.paymasterToken &&
+      options.paymasterToken.toLowerCase() === depositTokenAddress.toLowerCase()
+    ) {
+      await this.validateGasReserve(
+        depositTokenAddress,
+        currentAddress,
+        depositTokenDecimals,
+        rawDepositAmount,
+      );
+    }
 
     const allowance = await this.checkAllowance(
-      vaultInfo.tokenAddress,
-      vaultInfo.vaultAddress,
-      owner,
-      this.selectedChainId!,
+      depositTokenAddress,
+      vaultAddress,
+      currentAddress,
+      this.getSelectedChainId(),
     );
 
-    const ops: { to: Address; data: `0x${string}` }[] = [];
-
-    if (allowance < assets) {
-      ops.push({
-        to: vaultInfo.tokenAddress,
+    if (allowance < rawDepositAmount) {
+      const approveData = {
+        to: depositTokenAddress,
         data: encodeFunctionData({
           abi: erc20Abi,
           functionName: 'approve',
-          args: [vaultInfo.vaultAddress, assets],
+          args: [vaultAddress, rawDepositAmount],
         }),
-      });
+      };
+
+      operationsCallData.push(approveData);
     }
-    ops.push({
-      to: vaultInfo.vaultAddress,
+
+    const depositData = {
+      to: vaultAddress,
       data: encodeFunctionData({
         abi: SPARK_VAULT_ABI,
         functionName: 'deposit',
-        args: [assets, owner] as const,
+        args: [rawDepositAmount, currentAddress] as const,
       }),
-    });
+    };
 
-    const hash = await smartWallet.sendBatch(ops, this.selectedChainId!);
+    operationsCallData.push(depositData);
+
+    const hash = await smartWallet.sendBatch(
+      operationsCallData,
+      this.getSelectedChainId(),
+      options,
+    );
     return { success: true, hash };
   }
 
@@ -156,38 +184,58 @@ export class SparkProtocol extends BaseProtocol {
    */
   async withdraw(
     vaultInfo: VaultInfo,
-    amount: string | undefined,
     smartWallet: SmartWallet,
+    amount?: string,
+    options?: { paymasterToken?: Address },
   ): Promise<VaultTxnResult> {
-    const owner = await smartWallet.getAddress();
+    const currentAddress = await smartWallet.getAddress();
 
-    let withdrawData: { to: Address; data: `0x${string}` };
+    const tokenDecimals = vaultInfo.tokenDecimals;
+    const tokenAddress = vaultInfo.tokenAddress;
+    const vaultAddress = vaultInfo.vaultAddress;
 
+    const operationsCallData: TransactionData[] = [];
+
+    // If paymaster token and withdraw token are the same, validate gas reserve balance
+    if (
+      options?.paymasterToken &&
+      options.paymasterToken.toLowerCase() === tokenAddress.toLowerCase()
+    ) {
+      await this.validateGasReserve(tokenAddress, currentAddress, tokenDecimals);
+    }
+
+    let withdrawCallData: TransactionData;
     if (amount) {
-      const assets = parseUnits(amount, vaultInfo.tokenDecimals);
+      const rawWithdrawAmount = parseUnits(amount, tokenDecimals);
 
-      withdrawData = {
-        to: vaultInfo.vaultAddress,
+      withdrawCallData = {
+        to: vaultAddress,
         data: encodeFunctionData({
           abi: SPARK_VAULT_ABI,
           functionName: 'withdraw',
-          args: [assets, owner, owner] as const,
+          args: [rawWithdrawAmount, currentAddress, currentAddress] as const,
         }),
       };
     } else {
-      const maxShares = await this.getMaxRedeemableShares(vaultInfo, owner);
+      const maxShares = await this.getMaxRedeemableShares(vaultInfo, currentAddress);
 
-      withdrawData = {
-        to: vaultInfo.vaultAddress,
+      withdrawCallData = {
+        to: vaultAddress,
         data: encodeFunctionData({
           abi: SPARK_VAULT_ABI,
           functionName: 'redeem',
-          args: [maxShares, owner, owner] as const,
+          args: [maxShares, currentAddress, currentAddress] as const,
         }),
       };
     }
 
-    const hash = await smartWallet.send(withdrawData, this.selectedChainId!);
+    operationsCallData.push(withdrawCallData);
+
+    const hash = await smartWallet.sendBatch(
+      operationsCallData,
+      this.getSelectedChainId(),
+      options,
+    );
 
     return { success: true, hash };
   }
