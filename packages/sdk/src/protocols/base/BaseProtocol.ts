@@ -226,26 +226,26 @@ export abstract class BaseProtocol {
   /**
    * Calculate gas reserve amount based on balance and token decimals
    * Uses a more sophisticated calculation that considers token decimal places:
-   * - For tokens with low decimals (≤6): Uses a fixed minimum amount configured via
-   *   GAS_RESERVE_MINIMUM (e.g., 0.01 tokens), with at least 1 unit reserved
-   * - For tokens with higher decimals (>6): Uses GAS_RESERVE_PERCENTAGE% of balance
+   * - For tokens with low decimals (≤6): uses a fixed minimum amount configured via
+   *   GAS_RESERVE_MINIMUM (e.g., currently 0.01 tokens), with at least 1 unit reserved
+   * - For tokens with higher decimals (>6): uses GAS_RESERVE_PERCENTAGE% of the balance,
    *   with a minimum of 1 unit
    * @param balance Current token balance
    * @param tokenDecimals Number of decimals for the token
    * @returns Gas reserve amount in token units
    */
   protected calculateGasReserve(balance: bigint, tokenDecimals: number): bigint {
-    // For tokens with low decimals (e.g., WBTC with 8 decimals), use a fixed minimum
-    // This ensures sufficient gas coverage for high-value tokens
+    // For tokens with low decimals (e.g., 6-decimal tokens like USDC), use a fixed minimum
+    // This ensures sufficient gas coverage for high-value or low-decimal tokens
     if (tokenDecimals <= 6) {
-      // Reserve 0.001 tokens (or 1 unit if that's larger)
+      // Reserve GAS_RESERVE_MINIMUM tokens (e.g., 0.01) or 1 unit if that's larger
       const fixedReserve = parseUnits(GAS_RESERVE_MINIMUM, tokenDecimals);
       const oneUnit = 1n;
       return fixedReserve > oneUnit ? fixedReserve : oneUnit;
     }
 
-    // For tokens with high decimals, use percentage-based approach
-    // Reserve 1% of balance with a minimum of 1 unit
+    // For tokens with higher decimals, use a percentage-based approach
+    // Reserve GAS_RESERVE_PERCENTAGE% of the balance with a minimum of 1 unit
     const percentageReserve = (balance * BigInt(GAS_RESERVE_PERCENTAGE)) / 100n;
     const oneUnit = 1n;
     return percentageReserve > 0n ? percentageReserve : oneUnit;
