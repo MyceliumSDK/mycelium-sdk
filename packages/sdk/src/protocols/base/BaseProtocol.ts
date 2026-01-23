@@ -97,7 +97,7 @@ export abstract class BaseProtocol {
    */
   abstract withdraw(
     vaultInfo: VaultInfo,
-    amount?: string,
+    amount: string | undefined,
     smartWallet: SmartWallet,
     options?: { paymasterToken?: Address },
   ): Promise<VaultTxnResult>;
@@ -228,8 +228,9 @@ export abstract class BaseProtocol {
    * Uses a more sophisticated calculation that considers token decimal places:
    * - For tokens with low decimals (≤6): uses a fixed minimum amount configured via
    *   GAS_RESERVE_MINIMUM (e.g., currently 0.01 tokens), with at least 1 unit reserved
-   * - For tokens with higher decimals (>6): uses GAS_RESERVE_PERCENTAGE% of the balance,
-   *   with a minimum of 1 unit
+   * - For tokens with higher decimals (>6): uses the maximum of GAS_RESERVE_PERCENTAGE%
+   *   of the balance and a fixed minimum (GAS_RESERVE_MINIMUM), ensuring a balance-independent
+   *   minimum for withdraw validation
    * @param balance Current token balance
    * @param tokenDecimals Number of decimals for the token
    * @returns Gas reserve amount in token units
@@ -244,11 +245,13 @@ export abstract class BaseProtocol {
       return fixedReserve > oneUnit ? fixedReserve : oneUnit;
     }
 
-    // For tokens with higher decimals, use a percentage-based approach
-    // Reserve GAS_RESERVE_PERCENTAGE% of the balance with a minimum of 1 unit
+    // For tokens with higher decimals, use the maximum of percentage-based and fixed minimum
+    // This ensures withdraw validation has a meaningful balance-independent minimum
     const percentageReserve = (balance * BigInt(GAS_RESERVE_PERCENTAGE)) / 100n;
-    const oneUnit = 1n;
-    return percentageReserve > 0n ? percentageReserve : oneUnit;
+    const fixedMinimum = parseUnits(GAS_RESERVE_MINIMUM, tokenDecimals);
+
+    // Return the maximum of the two to ensure adequate reserve for gas payment
+    return percentageReserve > fixedMinimum ? percentageReserve : fixedMinimum;
   }
 
   /**
