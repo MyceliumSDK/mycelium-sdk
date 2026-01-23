@@ -226,9 +226,9 @@ export abstract class BaseProtocol {
   /**
    * Calculate gas reserve amount based on balance and token decimals
    * Uses a more sophisticated calculation that considers token decimal places:
-   * - For tokens with low decimals (≤6): uses a fixed minimum amount configured via
+   * - For tokens with 6 or fewer decimals: uses a fixed minimum amount configured via
    *   GAS_RESERVE_MINIMUM (e.g., currently 0.01 tokens), with at least 1 unit reserved
-   * - For tokens with higher decimals (>6): uses the maximum of GAS_RESERVE_PERCENTAGE%
+   * - For tokens with more than 6 decimals: uses the maximum of GAS_RESERVE_PERCENTAGE%
    *   of the balance and a fixed minimum (GAS_RESERVE_MINIMUM), ensuring a balance-independent
    *   minimum for withdraw validation
    * @param balance Current token balance
@@ -236,7 +236,7 @@ export abstract class BaseProtocol {
    * @returns Gas reserve amount in token units
    */
   protected calculateGasReserve(balance: bigint, tokenDecimals: number): bigint {
-    // For tokens with low decimals (e.g., 6-decimal tokens like USDC), use a fixed minimum
+    // For tokens with 6 or fewer decimals (e.g., USDC with 6 decimals), use a fixed minimum
     // This ensures sufficient gas coverage for high-value or low-decimal tokens
     if (tokenDecimals <= 6) {
       // Reserve GAS_RESERVE_MINIMUM tokens (e.g., 0.01) or 1 unit if that's larger
@@ -245,7 +245,7 @@ export abstract class BaseProtocol {
       return fixedReserve > oneUnit ? fixedReserve : oneUnit;
     }
 
-    // For tokens with higher decimals, use the maximum of percentage-based and fixed minimum
+    // For tokens with more than 6 decimals, use the maximum of percentage-based and fixed minimum
     // This ensures withdraw validation has a meaningful balance-independent minimum
     const percentageReserve = (balance * BigInt(GAS_RESERVE_PERCENTAGE)) / 100n;
     const fixedMinimum = parseUnits(GAS_RESERVE_MINIMUM, tokenDecimals);
