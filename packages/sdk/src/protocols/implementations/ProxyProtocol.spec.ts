@@ -405,7 +405,7 @@ describe('ProxyProtocol integration tests', () => {
 
       (smartWallet.send as ReturnType<typeof vi.fn>).mockResolvedValue('0xhash456' as Hash);
 
-      const result = await proxyProtocol.withdraw(mockVaultInfo, '500', smartWallet);
+      const result = await proxyProtocol.withdraw(mockVaultInfo, smartWallet, '500');
 
       expect(apiClient.sendRequest).toHaveBeenCalledWith('withdraw', undefined, 'spark', {
         vaultInfo: mockVaultInfo,
@@ -444,7 +444,7 @@ describe('ProxyProtocol integration tests', () => {
 
       (smartWallet.send as ReturnType<typeof vi.fn>).mockResolvedValue('0xhash456' as Hash);
 
-      const result = await proxyProtocol.withdraw(mockVaultInfo, '', smartWallet);
+      const result = await proxyProtocol.withdraw(mockVaultInfo, smartWallet);
 
       expect(apiClient.sendRequest).toHaveBeenCalledWith('withdraw', undefined, 'spark', {
         vaultInfo: mockVaultInfo,
@@ -458,7 +458,7 @@ describe('ProxyProtocol integration tests', () => {
     it('should throw error when no earning balances found', async () => {
       vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(null);
 
-      await expect(proxyProtocol.withdraw(mockVaultInfo, '500', smartWallet)).rejects.toThrow(
+      await expect(proxyProtocol.withdraw(mockVaultInfo, smartWallet, '500')).rejects.toThrow(
         'No earning balances found',
       );
     });
@@ -473,7 +473,7 @@ describe('ProxyProtocol integration tests', () => {
 
       vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(mockEarningBalances);
 
-      await expect(proxyProtocol.withdraw(mockVaultInfo, '500', smartWallet)).rejects.toThrow(
+      await expect(proxyProtocol.withdraw(mockVaultInfo, smartWallet, '500')).rejects.toThrow(
         'No earning balance found',
       );
     });
@@ -493,7 +493,7 @@ describe('ProxyProtocol integration tests', () => {
         error: 'API error',
       });
 
-      await expect(proxyProtocol.withdraw(mockVaultInfo, '500', smartWallet)).rejects.toThrow(
+      await expect(proxyProtocol.withdraw(mockVaultInfo, smartWallet, '500')).rejects.toThrow(
         'API error',
       );
     });
@@ -524,7 +524,7 @@ describe('ProxyProtocol integration tests', () => {
 
       (smartWallet.send as ReturnType<typeof vi.fn>).mockResolvedValue('0xhash456' as Hash);
 
-      await proxyProtocol.withdraw(mockVaultInfo, '500', smartWallet);
+      await proxyProtocol.withdraw(mockVaultInfo, smartWallet, '500');
 
       expect(apiClient.sendRequest).toHaveBeenCalledWith(
         'log',
@@ -571,7 +571,7 @@ describe('ProxyProtocol integration tests', () => {
 
       (smartWallet.send as ReturnType<typeof vi.fn>).mockResolvedValue('0xhash456' as Hash);
 
-      const result = await proxyProtocol.withdraw(mockVaultInfo, '500', smartWallet, {
+      const result = await proxyProtocol.withdraw(mockVaultInfo, smartWallet, '500', {
         paymasterToken,
       });
 
@@ -606,7 +606,7 @@ describe('ProxyProtocol integration tests', () => {
       );
 
       await expect(
-        proxyProtocol.withdraw(mockVaultInfo, '500', smartWallet, { paymasterToken }),
+        proxyProtocol.withdraw(mockVaultInfo, smartWallet, '500', { paymasterToken }),
       ).rejects.toThrow('Insufficient wallet balance for gas payment');
     });
   });

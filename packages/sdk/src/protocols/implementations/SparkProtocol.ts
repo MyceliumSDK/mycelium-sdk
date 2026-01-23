@@ -184,8 +184,8 @@ export class SparkProtocol extends BaseProtocol {
    */
   async withdraw(
     vaultInfo: VaultInfo,
-    amount: string | undefined,
     smartWallet: SmartWallet,
+    amount?: string,
     options?: { paymasterToken?: Address },
   ): Promise<VaultTxnResult> {
     const currentAddress = await smartWallet.getAddress();

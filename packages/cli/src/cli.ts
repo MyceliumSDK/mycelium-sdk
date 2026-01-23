@@ -397,7 +397,7 @@ export class CLI {
     const currentVaultBalance = selectedVault.currentBalance;
 
     logState(
-      `Current vault balance: ${currentVaultBalance.actualCurrentBalance ?? currentVaultBalance}`,
+      `Current vault balance: ${currentVaultBalance.actualCurrentBalance || currentVaultBalance}`,
     );
     const amountToWithdraw = await this.ask(
       `Enter the amount to withdraw (hit "enter" to withdraw all balance): `,

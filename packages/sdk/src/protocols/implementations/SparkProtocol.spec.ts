@@ -300,14 +300,6 @@ describe('SparkProtocol integration tests', () => {
       await sparkProtocol.init(chainManager);
     });
 
-    it('should throw error when public client is not initialized for max shares', async () => {
-      const uninitializedProtocol = new SparkProtocol();
-
-      await expect(
-        uninitializedProtocol.withdraw(mockVaultInfo, undefined, smartWallet),
-      ).rejects.toThrow('Public client not initialized');
-    });
-
     it('should withdraw with paymaster token when paymaster token equals withdraw token', async () => {
       const paymasterToken = mockVaultInfo.tokenAddress;
       const mockPublicClient = chainManager.getPublicClient(8453);
@@ -324,7 +316,7 @@ describe('SparkProtocol integration tests', () => {
 
       (smartWallet.sendBatch as ReturnType<typeof vi.fn>).mockResolvedValue('0xhash456' as Hash);
 
-      const result = await sparkProtocol.withdraw(mockVaultInfo, '500', smartWallet, {
+      const result = await sparkProtocol.withdraw(mockVaultInfo, smartWallet, '500', {
         paymasterToken,
       });
 
@@ -359,7 +351,7 @@ describe('SparkProtocol integration tests', () => {
       );
 
       await expect(
-        sparkProtocol.withdraw(mockVaultInfo, '500', smartWallet, { paymasterToken }),
+        sparkProtocol.withdraw(mockVaultInfo, smartWallet, '500', { paymasterToken }),
       ).rejects.toThrow('Insufficient wallet balance for gas payment');
     });
 
@@ -376,7 +368,7 @@ describe('SparkProtocol integration tests', () => {
 
       (smartWallet.sendBatch as ReturnType<typeof vi.fn>).mockResolvedValue('0xhash456' as Hash);
 
-      const result = await sparkProtocol.withdraw(mockVaultInfo, '500', smartWallet);
+      const result = await sparkProtocol.withdraw(mockVaultInfo, smartWallet, '500');
 
       expect(parseUnits).toHaveBeenCalledWith('500', mockVaultInfo.tokenDecimals);
       expect(encodeFunctionData).toHaveBeenCalledWith({
@@ -413,7 +405,7 @@ describe('SparkProtocol integration tests', () => {
 
       (smartWallet.sendBatch as ReturnType<typeof vi.fn>).mockResolvedValue('0xhash456' as Hash);
 
-      const result = await sparkProtocol.withdraw(mockVaultInfo, undefined, smartWallet);
+      const result = await sparkProtocol.withdraw(mockVaultInfo, smartWallet);
 
       expect(mockPublicClient.readContract).toHaveBeenCalledWith({
         address: mockVaultInfo.vaultAddress,
@@ -445,9 +437,9 @@ describe('SparkProtocol integration tests', () => {
     it('should throw error when public client is not initialized for max shares', async () => {
       const uninitializedProtocol = new SparkProtocol();
 
-      await expect(
-        uninitializedProtocol.withdraw(mockVaultInfo, undefined, smartWallet),
-      ).rejects.toThrow('Public client not initialized');
+      await expect(uninitializedProtocol.withdraw(mockVaultInfo, smartWallet)).rejects.toThrow(
+        'Public client not initialized',
+      );
     });
   });
 

@@ -241,8 +241,8 @@ export class DefaultSmartWallet extends SmartWallet {
   ): Promise<VaultTxnResult> {
     const withdrawTransactionResult = await this.protocolProvider.withdraw(
       vaultInfo,
-      amount,
       this,
+      amount,
       options,
     );
 
