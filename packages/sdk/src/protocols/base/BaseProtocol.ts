@@ -189,7 +189,8 @@ export abstract class BaseProtocol {
     operationAmount?: bigint,
   ): Promise<void> {
     this.ensureInitialized();
-    const publicClient = this.chainManager!.getPublicClient(this.selectedChainId!);
+    const chainId = this.getSelectedChainId();
+    const publicClient = this.chainManager!.getPublicClient(chainId);
     const balance = await publicClient.readContract({
       address: tokenAddress,
       abi: erc20Abi,
