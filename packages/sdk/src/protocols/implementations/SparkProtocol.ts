@@ -2,14 +2,7 @@ import { BaseProtocol } from '@/protocols/base/BaseProtocol';
 import type { ChainManager } from '@/tools/ChainManager';
 import type { SmartWallet } from '@/wallet/base/wallets/SmartWallet';
 
-import {
-  type Address,
-  encodeFunctionData,
-  erc20Abi,
-  formatUnits,
-  maxUint256,
-  parseUnits,
-} from 'viem';
+import { type Address, encodeFunctionData, erc20Abi, formatUnits, parseUnits } from 'viem';
 
 import { SPARK_VAULT_ABI, SPARK_SSR_ORACLE_ABI } from '@/abis/protocols/spark';
 import {
@@ -19,7 +12,7 @@ import {
   SPARK_VAULT,
 } from '@/protocols/constants/spark';
 import type { VaultBalance, VaultInfo, Vaults, VaultTxnResult } from '@/types/protocols/general';
-import { GAS_RESERVE_MINIMUM, GAS_RESERVE_PERCENTAGE } from '@/constants/paymaster';
+import type { TransactionData } from '@/types/transaction';
 
 /**
  * @internal
@@ -42,7 +35,7 @@ export class SparkProtocol extends BaseProtocol {
     this.chainManager = chainManager;
     this.selectedChainId = chainManager.getSupportedChain();
 
-    this.publicClient = chainManager.getPublicClient(this.selectedChainId!);
+    this.publicClient = chainManager.getPublicClient(this.getSelectedChainId());
 
     this.allVaults = SPARK_VAULT;
   }
@@ -127,9 +120,9 @@ export class SparkProtocol extends BaseProtocol {
 
     const rawDepositAmount = parseUnits(amount, vaultInfo.tokenDecimals);
 
-    const operationsCallData = [];
+    const operationsCallData: TransactionData[] = [];
 
-    // If paymaster token and deposit token are the same, reserve balance for gas
+    // If paymaster token and deposit token are the same, validate gas reserve balance
     if (
       options?.paymasterToken &&
       options.paymasterToken.toLowerCase() === depositTokenAddress.toLowerCase()
@@ -146,7 +139,7 @@ export class SparkProtocol extends BaseProtocol {
       depositTokenAddress,
       vaultAddress,
       currentAddress,
-      this.selectedChainId!,
+      this.getSelectedChainId(),
     );
 
     if (allowance < rawDepositAmount) {
@@ -173,7 +166,11 @@ export class SparkProtocol extends BaseProtocol {
 
     operationsCallData.push(depositData);
 
-    const hash = await smartWallet.sendBatch(operationsCallData, this.selectedChainId!, options);
+    const hash = await smartWallet.sendBatch(
+      operationsCallData,
+      this.getSelectedChainId(),
+      options,
+    );
     return { success: true, hash };
   }
 
@@ -197,8 +194,9 @@ export class SparkProtocol extends BaseProtocol {
     const tokenAddress = vaultInfo.tokenAddress;
     const vaultAddress = vaultInfo.vaultAddress;
 
-    const operationsCallData = [];
+    const operationsCallData: TransactionData[] = [];
 
+    // If paymaster token and withdraw token are the same, validate gas reserve balance
     if (
       options?.paymasterToken &&
       options.paymasterToken.toLowerCase() === tokenAddress.toLowerCase()
@@ -206,29 +204,7 @@ export class SparkProtocol extends BaseProtocol {
       await this.validateGasReserve(tokenAddress, currentAddress, tokenDecimals);
     }
 
-    // Check allowance of sUSDC shares (vaultAddress) for the vault (vaultAddress)
-    // In ERC-4626, the vault contract IS the share token
-    const allowance = await this.checkAllowance(
-      vaultAddress, // sUSDC shares token address (same as vault)
-      vaultAddress, // vault address (needs approval to spend shares)
-      currentAddress,
-      this.selectedChainId!,
-    );
-
-    // Approve vault to spend sUSDC shares if needed
-    if (allowance === 0n) {
-      const approveData = {
-        to: vaultAddress, // sUSDC share token
-        data: encodeFunctionData({
-          abi: erc20Abi,
-          functionName: 'approve',
-          args: [vaultAddress, maxUint256], // Approve vault to spend shares
-        }),
-      };
-      operationsCallData.push(approveData);
-    }
-
-    let withdrawCallData;
+    let withdrawCallData: TransactionData;
     if (amount) {
       const rawWithdrawAmount = parseUnits(amount, tokenDecimals);
 
@@ -255,84 +231,13 @@ export class SparkProtocol extends BaseProtocol {
 
     operationsCallData.push(withdrawCallData);
 
-    const hash = await smartWallet.sendBatch(operationsCallData, this.selectedChainId!, options);
+    const hash = await smartWallet.sendBatch(
+      operationsCallData,
+      this.getSelectedChainId(),
+      options,
+    );
 
     return { success: true, hash };
-  }
-
-  /**
-   * Validate gas reserve balance for operations using paymaster
-   * Ensures sufficient balance remains for gas payment when using paymaster with the same token
-   * @param tokenAddress Token address to check balance for
-   * @param walletAddress Wallet address to check
-   * @param tokenDecimals Number of decimals for the token
-   * @param operationAmount Optional: Amount for deposit operation (in token units). If provided, validates deposit; otherwise validates withdraw
-   * @throws Error if balance is insufficient for gas payment or operation
-   */
-  private async validateGasReserve(
-    tokenAddress: Address,
-    walletAddress: Address,
-    tokenDecimals: number,
-    operationAmount?: bigint,
-  ): Promise<void> {
-    this.ensureInitialized();
-    const publicClient = this.chainManager!.getPublicClient(this.selectedChainId!);
-    const balance = await publicClient.readContract({
-      address: tokenAddress,
-      abi: erc20Abi,
-      functionName: 'balanceOf',
-      args: [walletAddress],
-    });
-
-    const gasReserve = this.calculateGasReserve(balance, tokenDecimals);
-
-    if (operationAmount !== undefined) {
-      // Deposit validation: check if operation amount exceeds available balance after gas reserve
-      const maxDepositAmount = balance > gasReserve ? balance - gasReserve : 0n;
-
-      if (operationAmount > maxDepositAmount) {
-        const maxDepositFormatted = Number(maxDepositAmount) / 10 ** tokenDecimals;
-        throw new Error(
-          `Insufficient balance. Must reserve tokens for gas payment. Max deposit: ${maxDepositFormatted.toFixed(tokenDecimals)}`,
-        );
-      }
-    } else {
-      // Withdraw validation: check if balance meets minimum gas reserve requirement
-      const minRequiredBalance = gasReserve;
-
-      if (balance < minRequiredBalance) {
-        const minRequiredFormatted = Number(minRequiredBalance) / 10 ** tokenDecimals;
-        throw new Error(
-          `Insufficient wallet balance for gas payment. Wallet needs at least ${minRequiredFormatted.toFixed(tokenDecimals)} tokens to pay for gas before withdrawal.`,
-        );
-      }
-    }
-  }
-
-  /**
-   * Calculate gas reserve amount based on balance and token decimals
-   * Uses a more sophisticated calculation that considers token decimal places:
-   * - For tokens with low decimals (≤8): Uses a fixed minimum amount (e.g., 0.001 tokens)
-   * - For tokens with high decimals (>8): Uses 1% of balance with a minimum of 1 unit
-   * @param balance Current token balance
-   * @param tokenDecimals Number of decimals for the token
-   * @returns Gas reserve amount in token units
-   */
-  private calculateGasReserve(balance: bigint, tokenDecimals: number): bigint {
-    // For tokens with low decimals (e.g., WBTC with 8 decimals), use a fixed minimum
-    // This ensures sufficient gas coverage for high-value tokens
-    if (tokenDecimals <= 6) {
-      // Reserve 0.001 tokens (or 1 unit if that's larger)
-      const fixedReserve = parseUnits(GAS_RESERVE_MINIMUM.toString(), tokenDecimals);
-      const oneUnit = 1n;
-      return fixedReserve > oneUnit ? fixedReserve : oneUnit;
-    }
-
-    // For tokens with high decimals, use percentage-based approach
-    // Reserve 1% of balance with a minimum of 1 unit
-    const percentageReserve = (balance * BigInt(GAS_RESERVE_PERCENTAGE)) / 100n;
-    const oneUnit = 1n;
-    return percentageReserve > 0n ? percentageReserve : oneUnit;
   }
 
   /**

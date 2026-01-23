@@ -4,17 +4,17 @@
 
 ## What was changed?
 
-1. Added paymaster to ProxyProtocol to use with DeFi opportunities with Mycelium Cloud
-2. Updated tests for ProxyProtocol
-3. Added Paymaster support for DefaultSmartWallet
-4. Updated tests for DefaultSmartWallet.ts
-5. Added paymaster to SparkProtocol to use with Spark vaults
-6. Updated SparkProtocol tests
+- Added paymaster to ProxyProtocol to use with DeFi opportunities with Mycelium Cloud
+- Updated tests for ProxyProtocol
+- Added Paymaster support for DefaultSmartWallet
+- Updated tests for DefaultSmartWallet.ts
+- Added paymaster to SparkProtocol to use with Spark vaults
+- Updated SparkProtocol tests
 
 ## Why was changed/added?
 
-1. Support usage of paymaster with DeFi opportunities from Mycelium Cloud
-2. Supported usage of paymaster with DeFi opportunities with core SDK without Mycelium Cloud
+- Support usage of paymaster with DeFi opportunities from Mycelium Cloud
+- Supported usage of paymaster with DeFi opportunities with core SDK without Mycelium Cloud
 
 ## How to use the change?
 

@@ -7,10 +7,11 @@ import type {
   Vaults,
   VaultTxnResult,
 } from '@/types/protocols/general';
-import type { OperationCallDataType, ProxyBalance, ProxyVaults } from '@/types/protocols/proxy';
+import type { ProxyBalance, ProxyVaults } from '@/types/protocols/proxy';
 import { encodeFunctionData, erc20Abi, parseUnits, type Address, type Hash } from 'viem';
 import type { SmartWallet } from '@/public/types';
 import type { ApiClient } from '@/tools/ApiClient';
+import type { TransactionData } from '@/types/transaction';
 
 /**
  * Proxy protocol implementation that communicates with the backend to find optimal vaults
@@ -45,7 +46,7 @@ export class ProxyProtocol extends BaseProtocol {
     this.chainManager = chainManager;
     this.selectedChainId = chainManager.getSupportedChain();
 
-    this.publicClient = chainManager.getPublicClient(this.selectedChainId!);
+    this.publicClient = chainManager.getPublicClient(this.getSelectedChainId());
 
     this.apiClient = apiClient;
 
@@ -101,7 +102,7 @@ export class ProxyProtocol extends BaseProtocol {
   ): Promise<Vaults> {
     const pathParams = {
       risk_level: this.protocolsSecurityConfig.riskLevel,
-      chain_id: this.selectedChainId!.toString(),
+      chain_id: this.getSelectedChainId().toString(),
       stable_vaults_limit: stableVaultsLimit.toString(),
       non_stable_vaults_limit: nonStableVaultsLimit.toString(),
     };
@@ -151,48 +152,35 @@ export class ProxyProtocol extends BaseProtocol {
   ): Promise<VaultTxnResult> {
     const currentAddress = await smartWallet.getAddress();
 
-    const operationsCallData = [];
+    const operationsCallData: TransactionData[] = [];
     const depositTokenDecimals = vaultInfo.tokenDecimals;
     const depositTokenAddress = vaultInfo.tokenAddress;
     const vaultAddress = vaultInfo.vaultAddress;
 
     const rawDepositAmount = parseUnits(amount, depositTokenDecimals);
 
-    // If paymaster token and deposit token are the same, reserve balance for gas
+    // If paymaster token and deposit token are the same, validate gas reserve balance
     if (
       options?.paymasterToken &&
       options.paymasterToken.toLowerCase() === depositTokenAddress.toLowerCase()
     ) {
-      this.ensureInitialized();
-      const publicClient = this.chainManager!.getPublicClient(this.selectedChainId!);
-      const balance = await publicClient.readContract({
-        address: depositTokenAddress,
-        abi: erc20Abi,
-        functionName: 'balanceOf',
-        args: [currentAddress],
-      });
-
-      // Reserve ~1% for gas payment (minimum 1 unit)
-      const gasReserve = balance / 100n > 0n ? balance / 100n : 1n;
-      const maxDepositAmount = balance > gasReserve ? balance - gasReserve : 0n;
-
-      if (rawDepositAmount > maxDepositAmount) {
-        const maxDepositFormatted = Number(maxDepositAmount) / 10 ** depositTokenDecimals;
-        throw new Error(
-          `Insufficient balance. Must reserve tokens for gas payment. Max deposit: ${maxDepositFormatted.toFixed(depositTokenDecimals)}`,
-        );
-      }
+      await this.validateGasReserve(
+        depositTokenAddress,
+        currentAddress,
+        depositTokenDecimals,
+        rawDepositAmount,
+      );
     }
 
     const allowance = await this.checkAllowance(
       depositTokenAddress,
       vaultAddress,
       currentAddress,
-      this.selectedChainId!,
+      this.getSelectedChainId(),
     );
 
     if (allowance < rawDepositAmount) {
-      const approveData = {
+      const approveData: TransactionData = {
         to: depositTokenAddress,
         data: encodeFunctionData({
           abi: erc20Abi,
@@ -215,7 +203,7 @@ export class ProxyProtocol extends BaseProtocol {
       {
         vaultInfo,
         amount: amount.toString(),
-        chainId: this.selectedChainId!.toString(),
+        chainId: this.getSelectedChainId().toString(),
       },
     );
 
@@ -223,11 +211,15 @@ export class ProxyProtocol extends BaseProtocol {
       throw new Error(apiResponse.error || 'Failed to receive deposit operations call data');
     }
 
-    const receivedOperationsCallData = apiResponse.data as unknown as OperationCallDataType;
+    const receivedOperationsCallData = apiResponse.data as unknown as TransactionData;
 
     operationsCallData.push(receivedOperationsCallData);
 
-    const hash = await smartWallet.sendBatch(operationsCallData, this.selectedChainId!, options);
+    const hash = await smartWallet.sendBatch(
+      operationsCallData,
+      this.getSelectedChainId(),
+      options,
+    );
 
     const operationStatus = hash ? 'completed' : ('failed' as 'completed' | 'failed');
 
@@ -235,7 +227,7 @@ export class ProxyProtocol extends BaseProtocol {
       currentAddress,
       hash,
       vaultInfo,
-      this.selectedChainId!,
+      this.getSelectedChainId(),
       amount,
       'deposit',
       operationStatus,
@@ -276,30 +268,12 @@ export class ProxyProtocol extends BaseProtocol {
 
     const amountToWithdraw = amount ? amount : balanceInfo.currentBalance;
 
+    // If paymaster token and withdraw token are the same, validate gas reserve balance
     if (
       options?.paymasterToken &&
       options.paymasterToken.toLowerCase() === tokenAddress.toLowerCase()
     ) {
-      this.ensureInitialized();
-      const publicClient = this.chainManager!.getPublicClient(this.selectedChainId!);
-      const walletBalance = await publicClient.readContract({
-        address: tokenAddress,
-        abi: erc20Abi,
-        functionName: 'balanceOf',
-        args: [currentAddress],
-      });
-
-      // Reserve ~1% for gas payment (minimum 1 unit)
-      // The wallet must have enough balance BEFORE withdrawal to pay for gas
-      const gasReserve = walletBalance / 100n > 0n ? walletBalance / 100n : 1n;
-      const minRequiredBalance = gasReserve;
-
-      if (walletBalance < minRequiredBalance) {
-        const minRequiredFormatted = Number(minRequiredBalance) / 10 ** tokenDecimals;
-        throw new Error(
-          `Insufficient wallet balance for gas payment. Wallet needs at least ${minRequiredFormatted.toFixed(tokenDecimals)} tokens to pay for gas before withdrawal.`,
-        );
-      }
+      await this.validateGasReserve(tokenAddress, currentAddress, tokenDecimals);
     }
 
     const apiResponse = await this.apiClient.sendRequest(
@@ -309,7 +283,7 @@ export class ProxyProtocol extends BaseProtocol {
       {
         vaultInfo,
         amount: amountToWithdraw,
-        chainId: this.selectedChainId!,
+        chainId: this.getSelectedChainId(),
       },
     );
 
@@ -317,9 +291,13 @@ export class ProxyProtocol extends BaseProtocol {
       throw new Error(apiResponse.error || 'Failed to receive withdraw operations call data');
     }
 
-    const withdrawOperationCallData = apiResponse.data as unknown as OperationCallDataType;
+    const withdrawOperationCallData = apiResponse.data as unknown as TransactionData;
 
-    const hash = await smartWallet.send(withdrawOperationCallData, this.selectedChainId!, options);
+    const hash = await smartWallet.send(
+      withdrawOperationCallData,
+      this.getSelectedChainId(),
+      options,
+    );
 
     const operationStatus = hash ? 'completed' : ('failed' as 'completed' | 'failed');
 
@@ -327,7 +305,7 @@ export class ProxyProtocol extends BaseProtocol {
       currentAddress,
       hash,
       vaultInfo,
-      this.selectedChainId!,
+      this.getSelectedChainId(),
       amountToWithdraw,
       'withdrawal',
       operationStatus,
@@ -344,7 +322,7 @@ export class ProxyProtocol extends BaseProtocol {
    */
   async getBalances(walletAddress: Address, protocolId?: string): Promise<VaultBalance[]> {
     const pathParams = {
-      chain_id: this.selectedChainId!.toString(),
+      chain_id: this.getSelectedChainId().toString(),
       protocol_id: protocolId || '',
       userAddress: walletAddress,
     };
