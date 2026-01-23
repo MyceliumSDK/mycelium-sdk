@@ -97,7 +97,7 @@ export abstract class BaseProtocol {
    */
   abstract withdraw(
     vaultInfo: VaultInfo,
-    amount: string,
+    amount?: string,
     smartWallet: SmartWallet,
     options?: { paymasterToken?: Address },
   ): Promise<VaultTxnResult>;
