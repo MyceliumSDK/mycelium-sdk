@@ -172,9 +172,9 @@ describe('DefaultSmartWallet integration tests', () => {
       };
       vi.mocked(bundlerClient.estimateUserOperationGas).mockResolvedValue(mockGasEstimate);
       vi.mocked(bundlerClient.sendUserOperation).mockResolvedValue('0xTransactionHash');
-      // vi.mocked(bundlerClient.waitForUserOperationReceipt).mockResolvedValue({
-      //   receipt: {} as unknown as TransactionReceipt,
-      // });
+      vi.mocked(bundlerClient.waitForUserOperationReceipt).mockResolvedValue({
+        receipt: { transactionHash: '0xTransactionHash' },
+      });
 
       const result = await wallet.send(transactionData, chainId);
 
@@ -264,6 +264,9 @@ describe('DefaultSmartWallet integration tests', () => {
       };
       vi.mocked(bundlerClient.estimateUserOperationGas).mockResolvedValue(mockGasEstimate);
       vi.mocked(bundlerClient.sendUserOperation).mockResolvedValue('0xTransactionHash');
+      vi.mocked(bundlerClient.waitForUserOperationReceipt).mockResolvedValue({
+        receipt: { transactionHash: '0xTransactionHash' },
+      });
 
       const result = await wallet.sendBatch(transactionData, chainId);
 

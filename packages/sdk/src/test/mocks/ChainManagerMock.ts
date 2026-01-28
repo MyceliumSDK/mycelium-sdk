@@ -11,6 +11,7 @@ export const createMockChainManager = (): ChainManager => {
   const mockPublicClient = {
     readContract: vi.fn(),
     getBalance: vi.fn(),
+    waitForTransactionReceipt: vi.fn(),
   } as unknown as PublicClient;
 
   const mockBundlerClient = {
