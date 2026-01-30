@@ -178,6 +178,10 @@ describe('DefaultSmartWallet integration tests', () => {
 
       const result = await wallet.send(transactionData, chainId);
 
+      expect(
+        mockChainManager.getPublicClient(chainId).waitForTransactionReceipt,
+      ).toHaveBeenCalledWith({ hash: '0xTransactionHash' });
+
       expect(mockChainManager.getBundlerClient).toHaveBeenCalledWith(chainId, mockAccount);
       expect(bundlerClient.estimateUserOperationGas).toHaveBeenCalledWith({
         account: mockAccount,
@@ -269,6 +273,10 @@ describe('DefaultSmartWallet integration tests', () => {
       });
 
       const result = await wallet.sendBatch(transactionData, chainId);
+
+      expect(
+        mockChainManager.getPublicClient(chainId).waitForTransactionReceipt,
+      ).toHaveBeenCalledWith({ hash: '0xTransactionHash' });
 
       expect(mockChainManager.getBundlerClient).toHaveBeenCalledWith(chainId, mockAccount);
       expect(bundlerClient.estimateUserOperationGas).toHaveBeenCalledWith({
