@@ -286,13 +286,14 @@ export class DefaultSmartWallet extends SmartWallet {
       }
 
       const bundlerClient = this.chainManager.getBundlerClient(chainId, account);
+      const publicClient = this.chainManager.getPublicClient(chainId);
 
       const gas = await bundlerClient.estimateUserOperationGas({
         account,
         calls: [transactionData],
       });
 
-      const hash = await bundlerClient.sendUserOperation({
+      const userOperationHash = await bundlerClient.sendUserOperation({
         account,
         calls: [transactionData],
         callGasLimit: this.bumpGasLimits(gas.callGasLimit),
@@ -300,11 +301,16 @@ export class DefaultSmartWallet extends SmartWallet {
         preVerificationGas: this.bumpGasLimits(gas.preVerificationGas),
       });
 
-      await bundlerClient.waitForUserOperationReceipt({
-        hash,
+      const userOperationReceipt = await bundlerClient.waitForUserOperationReceipt({
+        hash: userOperationHash,
       });
 
-      return hash;
+      // Extra check that RPC node has included the transaction in the block
+      await publicClient.waitForTransactionReceipt({
+        hash: userOperationReceipt.receipt.transactionHash,
+      });
+
+      return userOperationHash;
     } catch (error) {
       throw new Error(
         `Failed to send transaction: ${error instanceof Error ? error.message.toString().slice(0, 100) : 'Unknown error'}`,
@@ -346,13 +352,14 @@ export class DefaultSmartWallet extends SmartWallet {
       }
 
       const bundlerClient = this.chainManager.getBundlerClient(chainId, account);
+      const publicClient = this.chainManager.getPublicClient(chainId);
 
       const gas = await bundlerClient.estimateUserOperationGas({
         account,
         calls: transactionData,
       });
 
-      const hash = await bundlerClient.sendUserOperation({
+      const userOperationHash = await bundlerClient.sendUserOperation({
         account,
         calls: transactionData,
         callGasLimit: this.bumpGasLimits(gas.callGasLimit),
@@ -360,11 +367,16 @@ export class DefaultSmartWallet extends SmartWallet {
         preVerificationGas: this.bumpGasLimits(gas.preVerificationGas),
       });
 
-      await bundlerClient.waitForUserOperationReceipt({
-        hash,
+      const userOperationReceipt = await bundlerClient.waitForUserOperationReceipt({
+        hash: userOperationHash,
       });
 
-      return hash;
+      // Extra check that RPC node has included the transaction in the block
+      await publicClient.waitForTransactionReceipt({
+        hash: userOperationReceipt.receipt.transactionHash,
+      });
+
+      return userOperationHash;
     } catch (error) {
       throw new Error(
         `Failed to send transaction: ${error instanceof Error ? error.message : 'Unknown error'}`,

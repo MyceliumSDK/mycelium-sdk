@@ -172,11 +172,15 @@ describe('DefaultSmartWallet integration tests', () => {
       };
       vi.mocked(bundlerClient.estimateUserOperationGas).mockResolvedValue(mockGasEstimate);
       vi.mocked(bundlerClient.sendUserOperation).mockResolvedValue('0xTransactionHash');
-      // vi.mocked(bundlerClient.waitForUserOperationReceipt).mockResolvedValue({
-      //   receipt: {} as unknown as TransactionReceipt,
-      // });
+      vi.mocked(bundlerClient.waitForUserOperationReceipt).mockResolvedValue({
+        receipt: { transactionHash: '0xTransactionHash' },
+      });
 
       const result = await wallet.send(transactionData, chainId);
+
+      expect(
+        mockChainManager.getPublicClient(chainId).waitForTransactionReceipt,
+      ).toHaveBeenCalledWith({ hash: '0xTransactionHash' });
 
       expect(mockChainManager.getBundlerClient).toHaveBeenCalledWith(chainId, mockAccount);
       expect(bundlerClient.estimateUserOperationGas).toHaveBeenCalledWith({
@@ -264,8 +268,15 @@ describe('DefaultSmartWallet integration tests', () => {
       };
       vi.mocked(bundlerClient.estimateUserOperationGas).mockResolvedValue(mockGasEstimate);
       vi.mocked(bundlerClient.sendUserOperation).mockResolvedValue('0xTransactionHash');
+      vi.mocked(bundlerClient.waitForUserOperationReceipt).mockResolvedValue({
+        receipt: { transactionHash: '0xTransactionHash' },
+      });
 
       const result = await wallet.sendBatch(transactionData, chainId);
+
+      expect(
+        mockChainManager.getPublicClient(chainId).waitForTransactionReceipt,
+      ).toHaveBeenCalledWith({ hash: '0xTransactionHash' });
 
       expect(mockChainManager.getBundlerClient).toHaveBeenCalledWith(chainId, mockAccount);
       expect(bundlerClient.estimateUserOperationGas).toHaveBeenCalledWith({
