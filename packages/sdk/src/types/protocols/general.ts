@@ -63,7 +63,7 @@ export interface Vaults {
 
 /**
  * @public
- * The info about current user's balance in a protocol vault
+ * The info about current user's balance for a protocol vault
  * @category Types
  * @remarks
  * The generic type that shows fields that should be present in a protocol vault balance
@@ -73,6 +73,30 @@ export interface VaultBalance {
   balance: string | ProxyBalance | null;
   /** info about a protocol vault where a user deposited funds */
   vaultInfo: VaultInfo;
+}
+
+/**
+ * @public
+ * The info about the overall balance of a user in all protocol vaults where he deposited his funds
+ * @category Types
+ */
+export interface OverallAddressBalance {
+  currentBalance: number;
+  actualCurrentBalance: number;
+  pnl?: number;
+  pnl7d?: number;
+  pnl30d?: number;
+  pnl90d?: number;
+}
+
+/**
+ * @public
+ * The info about the balance of a user in all protocol vaults where he deposited his funds and in each protocol vault separately
+ * @category Types
+ */
+export interface AddressBalance {
+  overall: OverallAddressBalance;
+  perVault: VaultBalance[];
 }
 
 /**

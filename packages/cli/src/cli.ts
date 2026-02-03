@@ -4,8 +4,9 @@ import {
   type MyceliumSDKConfig,
   type ProxyBalance,
   type SmartWallet,
-  type VaultBalance,
+  type AddressBalance,
   type Vaults,
+  type VaultBalance,
 } from '@mycelium-sdk/core';
 import { formatBalancesToDisplay, formatVaultInfoToDisplay, getEnv } from './utils/formatters';
 import { WalletDatabase } from './libs/database';
@@ -241,16 +242,16 @@ export class CLI {
       return;
     }
 
-    const earningBalances = (await this.wallet.getEarnBalances()) as VaultBalance[];
+    const earningBalances = (await this.wallet.getEarnBalances()) as AddressBalance;
 
     if (!earningBalances) {
       logError('No earning balances found. You have not deposited any funds yet');
       return;
     }
 
-    const formattedBalances = earningBalances
-      .filter((balance) => balance.balance !== null)
-      .map((balance) => {
+    const formattedBalances = earningBalances.perVault
+      .filter((balance: VaultBalance) => balance.balance !== null)
+      .map((balance: VaultBalance) => {
         const currentBalance = balance.balance as ProxyBalance;
         return {
           vaultInfo: balance.vaultInfo,
@@ -371,7 +372,7 @@ export class CLI {
       return;
     }
 
-    const balances = [...earningBalances].map((vault, index) => {
+    const balances = earningBalances.perVault.map((vault: VaultBalance, index: number) => {
       const currentBalance = vault.balance as ProxyBalance;
       return {
         optionId: index + 1,
