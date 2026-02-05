@@ -496,7 +496,7 @@ describe('SparkProtocol integration tests', () => {
       expect(typeof result.perVault[0]?.vaultInfo.metadata?.apy).toBe('number');
     });
 
-    it('should return null balance when wallet has no shares', async () => {
+    it('should return zero overall and perVault balance when wallet has no shares', async () => {
       const walletAddress = '0x1234567890123456789012345678901234567890' as Address;
       const mockPublicClient = chainManager.getPublicClient(8453);
       const mockSSR = BigInt('1050000000000000000000000000');

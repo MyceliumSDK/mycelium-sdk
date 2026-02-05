@@ -216,7 +216,7 @@ export class DefaultSmartWallet extends SmartWallet {
    *
    * @public
    * @category Earn
-   * @returns Vault balance or `null` if nothing deposited
+   * @returns Overall balance of a user and the list of vaults where he deposited his funds. {@link AddressBalance}
    */
   async getEarnBalances(): Promise<AddressBalance> {
     const userAddress = await this.getAddress();
