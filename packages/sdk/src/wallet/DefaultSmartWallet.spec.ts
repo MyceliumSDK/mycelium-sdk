@@ -15,7 +15,7 @@ import { createMockCoinbaseCDP } from '@mycelium-sdk/core/test/mocks/CoinbaseCDP
 import type { CoinbaseCDP } from '@mycelium-sdk/core/tools/CoinbaseCDP';
 import { onRampResponseMock } from '@mycelium-sdk/core/test/mocks/ramp/on-ramp';
 import { offRampResponseMock } from '@mycelium-sdk/core/test/mocks/ramp/off-ramp';
-import type { VaultInfo, VaultBalance } from '@mycelium-sdk/core/types/protocols/general';
+import type { AddressBalance, VaultInfo } from '@mycelium-sdk/core/types/protocols/general';
 import { SPARK_VAULT } from '@mycelium-sdk/core/protocols/constants/spark';
 
 vi.mock('viem/account-abstraction', () => ({
@@ -174,7 +174,7 @@ describe('DefaultSmartWallet integration tests', () => {
       vi.mocked(bundlerClient.sendUserOperation).mockResolvedValue('0xTransactionHash');
       vi.mocked(bundlerClient.waitForUserOperationReceipt).mockResolvedValue({
         receipt: { transactionHash: '0xTransactionHash' },
-      });
+      } as any);
 
       const result = await wallet.send(transactionData, chainId);
 
@@ -270,7 +270,7 @@ describe('DefaultSmartWallet integration tests', () => {
       vi.mocked(bundlerClient.sendUserOperation).mockResolvedValue('0xTransactionHash');
       vi.mocked(bundlerClient.waitForUserOperationReceipt).mockResolvedValue({
         receipt: { transactionHash: '0xTransactionHash' },
-      });
+      } as any);
 
       const result = await wallet.sendBatch(transactionData, chainId);
 
@@ -434,27 +434,30 @@ describe('DefaultSmartWallet integration tests', () => {
         mockCoinbaseCDP,
       );
 
-      const mockBalances: VaultBalance[] = [
-        {
-          vaultInfo: mockVaultInfo,
-          balance: '1000',
-        },
-      ];
+      const mockAddressBalance: AddressBalance = {
+        overall: { currentBalance: 1000, actualCurrentBalance: 1000 },
+        perVault: [
+          {
+            vaultInfo: mockVaultInfo,
+            balance: '1000',
+          },
+        ],
+      };
 
       vi.mocked(mockProtocol.getBalances as ReturnType<typeof vi.fn>).mockResolvedValue(
-        mockBalances,
+        mockAddressBalance,
       );
 
       const result = await wallet.getEarnBalances();
 
       expect(mockProtocol.getBalances).toHaveBeenCalledWith(await wallet.getAddress());
-      expect(result).toEqual(mockBalances);
-      expect(result).toHaveLength(1);
-      expect(result[0]?.vaultInfo).toEqual(mockVaultInfo);
-      expect(result[0]?.balance).toBe('1000');
+      expect(result).toEqual(mockAddressBalance);
+      expect(result.perVault).toHaveLength(1);
+      expect(result.perVault[0]?.vaultInfo).toEqual(mockVaultInfo);
+      expect(result.perVault[0]?.balance).toBe('1000');
     });
 
-    it('should return empty array when no balances found', async () => {
+    it('should return empty perVault when no balances found', async () => {
       const wallet = new DefaultSmartWallet(
         mockOwners,
         mockSigner,
@@ -463,11 +466,19 @@ describe('DefaultSmartWallet integration tests', () => {
         mockCoinbaseCDP,
       );
 
-      vi.mocked(mockProtocol.getBalances as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      const emptyAddressBalance: AddressBalance = {
+        overall: { currentBalance: 0, actualCurrentBalance: 0 },
+        perVault: [],
+      };
+
+      vi.mocked(mockProtocol.getBalances as ReturnType<typeof vi.fn>).mockResolvedValue(
+        emptyAddressBalance,
+      );
 
       const result = await wallet.getEarnBalances();
 
-      expect(result).toEqual([]);
+      expect(result).toEqual(emptyAddressBalance);
+      expect(result.perVault).toHaveLength(0);
     });
   });
 

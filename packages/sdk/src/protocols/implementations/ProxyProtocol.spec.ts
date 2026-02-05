@@ -6,6 +6,7 @@ import type { ChainManager } from '@mycelium-sdk/core/tools/ChainManager';
 import type { ApiClient } from '@mycelium-sdk/core/tools/ApiClient';
 import type { SmartWallet } from '@mycelium-sdk/core/wallet/base/wallets/SmartWallet';
 import type {
+  AddressBalance,
   ProtocolsSecurityConfig,
   VaultInfo,
   VaultBalance,
@@ -62,6 +63,14 @@ describe('ProxyProtocol integration tests', () => {
     earned30dUpdatedAt: '2024-01-01T00:00:00Z',
     earned90dUpdatedAt: '2024-01-01T00:00:00Z',
   };
+
+  const createMockAddressBalance = (perVault: VaultBalance[]): AddressBalance => ({
+    overall: {
+      currentBalance: 1000,
+      actualCurrentBalance: 1000,
+    },
+    perVault,
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -380,14 +389,9 @@ describe('ProxyProtocol integration tests', () => {
     });
 
     it('should withdraw specified amount from vault', async () => {
-      const mockEarningBalances: VaultBalance[] = [
-        {
-          vaultInfo: mockVaultInfo,
-          balance: mockProxyBalance,
-        },
-      ];
-
-      vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(mockEarningBalances);
+      vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(
+        createMockAddressBalance([{ vaultInfo: mockVaultInfo, balance: mockProxyBalance }]),
+      );
 
       const mockOperationData: TransactionData = {
         to: mockVaultInfo.vaultAddress,
@@ -419,14 +423,9 @@ describe('ProxyProtocol integration tests', () => {
     });
 
     it('should withdraw all balance when amount is not specified', async () => {
-      const mockEarningBalances: VaultBalance[] = [
-        {
-          vaultInfo: mockVaultInfo,
-          balance: mockProxyBalance,
-        },
-      ];
-
-      vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(mockEarningBalances);
+      vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(
+        createMockAddressBalance([{ vaultInfo: mockVaultInfo, balance: mockProxyBalance }]),
+      );
 
       const mockOperationData: TransactionData = {
         to: mockVaultInfo.vaultAddress,
@@ -464,14 +463,11 @@ describe('ProxyProtocol integration tests', () => {
     });
 
     it('should throw error when vault balance not found in earning balances', async () => {
-      const mockEarningBalances: VaultBalance[] = [
-        {
-          vaultInfo: { ...mockVaultInfo, id: 'different-vault' },
-          balance: mockProxyBalance,
-        },
-      ];
-
-      vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(mockEarningBalances);
+      vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(
+        createMockAddressBalance([
+          { vaultInfo: { ...mockVaultInfo, id: 'different-vault' }, balance: mockProxyBalance },
+        ]),
+      );
 
       await expect(proxyProtocol.withdraw(mockVaultInfo, smartWallet, '500')).rejects.toThrow(
         'No earning balance found',
@@ -479,14 +475,9 @@ describe('ProxyProtocol integration tests', () => {
     });
 
     it('should throw error when API fails to return withdraw operations', async () => {
-      const mockEarningBalances: VaultBalance[] = [
-        {
-          vaultInfo: mockVaultInfo,
-          balance: mockProxyBalance,
-        },
-      ];
-
-      vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(mockEarningBalances);
+      vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(
+        createMockAddressBalance([{ vaultInfo: mockVaultInfo, balance: mockProxyBalance }]),
+      );
 
       (apiClient.sendRequest as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: false,
@@ -499,14 +490,9 @@ describe('ProxyProtocol integration tests', () => {
     });
 
     it('should log operation after successful withdrawal', async () => {
-      const mockEarningBalances: VaultBalance[] = [
-        {
-          vaultInfo: mockVaultInfo,
-          balance: mockProxyBalance,
-        },
-      ];
-
-      vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(mockEarningBalances);
+      vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(
+        createMockAddressBalance([{ vaultInfo: mockVaultInfo, balance: mockProxyBalance }]),
+      );
 
       const mockOperationData: TransactionData = {
         to: mockVaultInfo.vaultAddress,
@@ -541,14 +527,10 @@ describe('ProxyProtocol integration tests', () => {
     it('should withdraw with paymaster token when paymaster token equals withdraw token', async () => {
       const paymasterToken = mockVaultInfo.tokenAddress;
       const mockPublicClient = chainManager.getPublicClient(8453);
-      const mockEarningBalances: VaultBalance[] = [
-        {
-          vaultInfo: mockVaultInfo,
-          balance: mockProxyBalance,
-        },
-      ];
 
-      vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(mockEarningBalances);
+      vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(
+        createMockAddressBalance([{ vaultInfo: mockVaultInfo, balance: mockProxyBalance }]),
+      );
 
       // Mock balance check for gas reserve
       vi.mocked(mockPublicClient.readContract as ReturnType<typeof vi.fn>).mockResolvedValue(
@@ -591,14 +573,10 @@ describe('ProxyProtocol integration tests', () => {
     it('should throw error when wallet balance is insufficient for gas payment', async () => {
       const paymasterToken = mockVaultInfo.tokenAddress;
       const mockPublicClient = chainManager.getPublicClient(8453);
-      const mockEarningBalances: VaultBalance[] = [
-        {
-          vaultInfo: mockVaultInfo,
-          balance: mockProxyBalance,
-        },
-      ];
 
-      vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(mockEarningBalances);
+      vi.mocked(smartWallet.getEarnBalances).mockResolvedValue(
+        createMockAddressBalance([{ vaultInfo: mockVaultInfo, balance: mockProxyBalance }]),
+      );
 
       // Mock balance that's too low for gas reserve
       vi.mocked(mockPublicClient.readContract as ReturnType<typeof vi.fn>).mockResolvedValue(
@@ -618,16 +596,13 @@ describe('ProxyProtocol integration tests', () => {
 
     it('should fetch and return earning balances of a user by a provided address', async () => {
       const walletAddress = '0x1234567890123456789012345678901234567890' as Address;
-      const mockBalances: VaultBalance[] = [
-        {
-          vaultInfo: mockVaultInfo,
-          balance: mockProxyBalance,
-        },
-      ];
+      const mockAddressBalance = createMockAddressBalance([
+        { vaultInfo: mockVaultInfo, balance: mockProxyBalance },
+      ]);
 
       (apiClient.sendRequest as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: true,
-        data: mockBalances,
+        data: mockAddressBalance,
       });
 
       const result = await proxyProtocol.getBalances(walletAddress);
@@ -638,21 +613,18 @@ describe('ProxyProtocol integration tests', () => {
         userAddress: walletAddress,
       });
 
-      expect(result).toEqual(mockBalances);
+      expect(result).toEqual(mockAddressBalance);
     });
 
     it('should fetch balances for specific protocol ID', async () => {
       const walletAddress = '0x1234567890123456789012345678901234567890' as Address;
-      const mockBalances: VaultBalance[] = [
-        {
-          vaultInfo: mockVaultInfo,
-          balance: mockProxyBalance,
-        },
-      ];
+      const mockAddressBalance = createMockAddressBalance([
+        { vaultInfo: mockVaultInfo, balance: mockProxyBalance },
+      ]);
 
       (apiClient.sendRequest as ReturnType<typeof vi.fn>).mockResolvedValue({
         success: true,
-        data: mockBalances,
+        data: mockAddressBalance,
       });
 
       await proxyProtocol.getBalances(walletAddress, 'spark');

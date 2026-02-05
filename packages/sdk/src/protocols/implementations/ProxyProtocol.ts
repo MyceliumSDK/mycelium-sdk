@@ -1,8 +1,8 @@
 import { BaseProtocol } from '@/protocols/base/BaseProtocol';
 import type { ChainManager } from '@/tools/ChainManager';
 import type {
+  AddressBalance,
   ProtocolsSecurityConfig,
-  VaultBalance,
   VaultInfo,
   Vaults,
   VaultTxnResult,
@@ -259,7 +259,9 @@ export class ProxyProtocol extends BaseProtocol {
       throw new Error('No earning balances found');
     }
 
-    const earningBalance = earningBalances.find((balance) => balance.vaultInfo.id === vaultInfo.id);
+    const earningBalance = earningBalances.perVault.find(
+      (balance) => balance.vaultInfo.id === vaultInfo.id,
+    );
 
     if (!earningBalance) {
       throw new Error('No earning balance found');
@@ -320,7 +322,7 @@ export class ProxyProtocol extends BaseProtocol {
    * @param protocolId Protocol ID to get the balances for. Optional, default is undefined
    * @returns Balances of the user in the protocol vaults
    */
-  async getBalances(walletAddress: Address, protocolId?: string): Promise<VaultBalance[]> {
+  async getBalances(walletAddress: Address, protocolId?: string): Promise<AddressBalance> {
     const pathParams = {
       chain_id: this.getSelectedChainId().toString(),
       protocol_id: protocolId || '',
@@ -333,7 +335,7 @@ export class ProxyProtocol extends BaseProtocol {
       throw new Error(apiResponse.error || 'Failed to get balances');
     }
 
-    const balances: VaultBalance[] = apiResponse.data as unknown as VaultBalance[];
+    const balances: AddressBalance = apiResponse.data as unknown as AddressBalance;
 
     return balances;
   }

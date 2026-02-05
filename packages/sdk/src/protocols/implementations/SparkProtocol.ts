@@ -11,7 +11,7 @@ import {
   SPARK_SSR_ORACLE_ADDRESS,
   SPARK_VAULT,
 } from '@/protocols/constants/spark';
-import type { VaultBalance, VaultInfo, Vaults, VaultTxnResult } from '@/types/protocols/general';
+import type { AddressBalance, VaultInfo, Vaults, VaultTxnResult } from '@/types/protocols/general';
 import type { TransactionData } from '@/types/transaction';
 
 /**
@@ -269,7 +269,7 @@ export class SparkProtocol extends BaseProtocol {
    * @param walletAddress Wallet address to check
    * @returns Array of vault balances with vaults info
    */
-  async getBalances(walletAddress: Address): Promise<VaultBalance[]> {
+  async getBalances(walletAddress: Address): Promise<AddressBalance> {
     if (!this.publicClient) {
       throw new Error('Public client not initialized');
     }
@@ -287,7 +287,18 @@ export class SparkProtocol extends BaseProtocol {
     });
 
     if (shares === 0n) {
-      return [{ balance: null, vaultInfo }];
+      return {
+        overall: {
+          currentBalance: 0,
+          actualCurrentBalance: 0,
+        },
+        perVault: [
+          {
+            balance: '0',
+            vaultInfo,
+          },
+        ],
+      };
     }
 
     const assets = await this.publicClient.readContract({
@@ -297,11 +308,21 @@ export class SparkProtocol extends BaseProtocol {
       args: [shares],
     });
 
-    return [
-      {
-        balance: formatUnits(assets, vaultInfo.tokenDecimals),
-        vaultInfo,
+    // So far only one vault is supported in this implementation
+    // Later on more vaults should be processed here and take into account in the final result
+    const vaultBalance = formatUnits(assets, vaultInfo.tokenDecimals);
+
+    return {
+      overall: {
+        currentBalance: Number(vaultBalance),
+        actualCurrentBalance: Number(vaultBalance),
       },
-    ];
+      perVault: [
+        {
+          balance: vaultBalance,
+          vaultInfo,
+        },
+      ],
+    };
   }
 }

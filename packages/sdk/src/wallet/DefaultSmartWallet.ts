@@ -17,7 +17,7 @@ import type { TokenBalance } from '@/types/token';
 import { type AssetIdentifier, parseAssetAmount, resolveAsset } from '@/utils/assets';
 import { SmartWallet } from '@/wallet/base/wallets/SmartWallet';
 import type { TransactionData } from '@/types/transaction';
-import type { VaultBalance, VaultInfo, VaultTxnResult } from '@/types/protocols/general';
+import type { AddressBalance, VaultInfo, VaultTxnResult } from '@/types/protocols/general';
 import type { CoinbaseCDP } from '@/tools/CoinbaseCDP';
 import type { OffRampUrlResponse, OnRampUrlResponse } from '@/types/ramp';
 import type { BaseProtocol } from '@/protocols/base/BaseProtocol';
@@ -216,9 +216,9 @@ export class DefaultSmartWallet extends SmartWallet {
    *
    * @public
    * @category Earn
-   * @returns Vault balance or `null` if nothing deposited
+   * @returns Overall balance of a user and the list of vaults where he deposited his funds. {@link AddressBalance}
    */
-  async getEarnBalances(): Promise<VaultBalance[]> {
+  async getEarnBalances(): Promise<AddressBalance> {
     const userAddress = await this.getAddress();
     return this.protocolProvider.getBalances(userAddress);
   }

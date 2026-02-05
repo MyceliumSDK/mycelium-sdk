@@ -488,14 +488,15 @@ describe('SparkProtocol integration tests', () => {
 
       expect(formatUnits).toHaveBeenCalledWith(mockAssets, mockVaultInfo.tokenDecimals);
 
-      expect(result).toHaveLength(1);
-      expect(result[0]?.vaultInfo.id).toBe('sUSDC');
-      expect(result[0]?.balance).toBe('1050.0');
-      expect(result[0]?.vaultInfo.metadata?.apy).toBeDefined();
-      expect(typeof result[0]?.vaultInfo.metadata?.apy).toBe('number');
+      expect(result.overall).toEqual({ currentBalance: 1050, actualCurrentBalance: 1050 });
+      expect(result.perVault).toHaveLength(1);
+      expect(result.perVault[0]?.vaultInfo.id).toBe('sUSDC');
+      expect(result.perVault[0]?.balance).toBe('1050.0');
+      expect(result.perVault[0]?.vaultInfo.metadata?.apy).toBeDefined();
+      expect(typeof result.perVault[0]?.vaultInfo.metadata?.apy).toBe('number');
     });
 
-    it('should return null balance when wallet has no shares', async () => {
+    it('should return zero overall and perVault balance when wallet has no shares', async () => {
       const walletAddress = '0x1234567890123456789012345678901234567890' as Address;
       const mockPublicClient = chainManager.getPublicClient(8453);
       const mockSSR = BigInt('1050000000000000000000000000');
@@ -512,11 +513,12 @@ describe('SparkProtocol integration tests', () => {
         functionName: 'getSSR',
       });
 
-      expect(result).toHaveLength(1);
-      expect(result[0]?.balance).toBeNull();
-      expect(result[0]?.vaultInfo.id).toBe('sUSDC');
-      expect(result[0]?.vaultInfo.metadata?.apy).toBeDefined();
-      expect(typeof result[0]?.vaultInfo.metadata?.apy).toBe('number');
+      expect(result.overall).toEqual({ currentBalance: 0, actualCurrentBalance: 0 });
+      expect(result.perVault).toHaveLength(1);
+      expect(result.perVault[0]?.balance).toBe('0');
+      expect(result.perVault[0]?.vaultInfo.id).toBe('sUSDC');
+      expect(result.perVault[0]?.vaultInfo.metadata?.apy).toBeDefined();
+      expect(typeof result.perVault[0]?.vaultInfo.metadata?.apy).toBe('number');
     });
 
     it('should throw error when public client is not initialized', async () => {

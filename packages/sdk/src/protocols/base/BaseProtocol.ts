@@ -15,10 +15,10 @@ import type { SupportedChainId } from '@/constants/chains';
 import type { SmartWallet } from '@/wallet/base/wallets/SmartWallet';
 import type {
   VaultInfo,
-  VaultBalance,
   VaultTxnResult,
   Vaults,
   ProtocolsSecurityConfig,
+  AddressBalance,
 } from '@/types/protocols/general';
 import type { ApiClient } from '@/tools/ApiClient';
 
@@ -108,7 +108,7 @@ export abstract class BaseProtocol {
    * @param protocolId Protocol ID to get balances for
    * @returns Balance of deposited funds
    */
-  abstract getBalances(walletAddress: Address, protocolId?: string): Promise<VaultBalance[]>;
+  abstract getBalances(walletAddress: Address, protocolId?: string): Promise<AddressBalance>;
 
   /**
    * Approve a token for protocol use
