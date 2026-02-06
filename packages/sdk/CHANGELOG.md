@@ -1,5 +1,33 @@
 # @mycelium-sdk/core
 
+## 2.0.0-alpha.2
+
+### Major Changes
+
+- d22d73a: ## What was changed?
+  - Added additional confirmation of a transaction for `send()` adn `sendBatch()` methods via RPC request using wait `waitForTransactionReceipt` method
+
+  ## Why was changed/added?
+  - Bundler sometimes go ahead in state that RPC node. It cause an issue when RPC try to fetch a wallet balance, but got zero result as a node still work with an old block
+
+  ## How to use the change?
+  - It will be used by default under the hood for `send()` and `sendBatch()` methods of the SDK
+
+- e53c0ad: ## What was changed?
+  - Introduced AddressBalance: balance is now returned as:{ overall: OverallAddressBalance; perVault: VaultBalance[] } instead of VaultBalance[]
+  - getBalances() (SparkProtocol, ProxyProtocol) now returns AddressBalance (overall totals plus per-vault list)
+  - getEarnBalances() on the wallet now returns AddressBalance instead of VaultBalance[]
+  - AddressBalance is exported from the SDK public types
+
+  ## Why was changed/added?
+  - Mycelium Cloud started to return a different format of data for the balance
+  - Callers need both an aggregated view (overall balance) and per-vault breakdown; a single type with overall and perVault supports both without extra requests
+  - Aligns protocol and wallet APIs and keeps balance shape consistent across the SDK
+
+  ## How to use the change?
+
+  Use the new return type: result.overall for aggregated numbers, result.perVault for the list of vault balances (same structure as before, but under perVault). Example: const { overall, perVault } = await wallet.getEarnBalances(); and then use perVault[0].balance, perVault[0].vaultInfo, etc. Replace any code that treated the result as a plain array (e.g. result[0]) with result.perVault[0] and use result.overall when you need totals
+
 ## 2.0.0-alpha.1
 
 ### Major Changes
